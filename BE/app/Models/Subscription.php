@@ -23,6 +23,12 @@ class Subscription extends Model
         'active' => 'boolean', 
     ];
 
+    protected $appends = [
+        'status',              
+        'duration_in_days',    
+        'business_account_name',
+    ];
+
     /**
      * The allowed values for the subscription type.
     */
@@ -68,6 +74,25 @@ class Subscription extends Model
     public function getStatusAttribute()
     {
         return $this->active ? 'Active' : 'Inactive';
+    }
+
+    /**
+     * Get the subscription duration in days.
+    */
+    public function getDurationInDaysAttribute()
+    {
+        if ($this->start_date && $this->end_date) {
+            return $this->start_date->diffInDays($this->end_date);
+        }
+        return null;
+    }
+
+    /**
+     * Get the business account name associated with the subscription.
+    */
+    public function getBusinessAccountNameAttribute()
+    {
+        return $this->businessUser ? $this->businessUser->name : null;
     }
 
 }
