@@ -8,6 +8,7 @@ use App\Models\User;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Services\ApiResponseService; 
 use App\Models\BusinessProfile;
+use App\Models\Subscription;
 
 class AuthController extends Controller
 {
@@ -36,6 +37,7 @@ class AuthController extends Controller
                 'opening_hour' => 'nullable|string',
                 'closing_hour' => 'nullable|string',
                 'main_img' => 'nullable|string',
+                'subscription_type' => 'required|string|in:monthly,yearly',
             ]);
         }
 
@@ -48,7 +50,7 @@ class AuthController extends Controller
             'profile_img' => $request->profile_img ?? null,
         ]);
 
-        // Create business profile if role is business
+        // Create business profile and subscription if role is business
         if ($user->role_id === 3) {
             BusinessProfile::create([
                 'user_id' => $user->id,
@@ -60,6 +62,17 @@ class AuthController extends Controller
                 'opening_hour' => $request->opening_hour,
                 'closing_hour' => $request->closing_hour,
                 'main_img' => $request->main_img,
+            ]);
+
+            $startDate = now();
+            $endDate = $request->subscription_type === 'monthly' ? $startDate->copy()->addMonth() : $startDate->copy()->addYear();
+
+            Subscription::create([
+                'business_user_id' => $user->id,
+                'type' => $request->subscription_type,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'active' => true,
             ]);
         }
 
@@ -103,6 +116,11 @@ class AuthController extends Controller
             $businessProfile = $user->businessProfile;
             unset($businessProfile->user);
             $user->business_profile = $businessProfile;
+
+            $subscription = Subscription::where('business_user_id', $user->id)
+                ->where('active', true)
+                ->first();
+            $user->subscription = $subscription;
         }
 
         return ApiResponseService::success('Authenticated user retrieved successfully', ['user' => $user]);
