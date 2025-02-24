@@ -98,8 +98,14 @@ class AuthController extends Controller
         $user = Auth::user();
         $user->role_name = $user->role->name;
         unset($user->updated_at, $user->created_at);
-        
-        return ApiResponseService::success('Authenticated user retrieved successfully', $user);
+
+        if ($user->role_id === 3) {
+            $businessProfile = $user->businessProfile;
+            unset($businessProfile->user);
+            $user->business_profile = $businessProfile;
+        }
+
+        return ApiResponseService::success('Authenticated user retrieved successfully', ['user' => $user]);
     }
 
     /**
