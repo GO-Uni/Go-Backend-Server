@@ -100,6 +100,15 @@ class AuthController extends Controller
 
         unset($user->updated_at, $user->created_at);
 
+        if ($user->role_id === 3) {
+            $businessProfile = $user->businessProfile;
+            unset($businessProfile->user);
+            $user->business_profile = $businessProfile;
+
+            $subscription = $user->subscription;
+            $user->subscription = $subscription;
+        }
+
         return ApiResponseService::success('Login successful', compact('user', 'token'));
     }
 
