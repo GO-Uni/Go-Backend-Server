@@ -20,5 +20,6 @@ Route::middleware('auth:api')->group(function () {
     // Routes that require business authorization
     Route::middleware(CheckBusinessAuthorization::class)->group(function () {
         Route::put('/business/profile/edit', [ProfileController::class, 'updateProfile']);
+        Route::put('/business/subscription/edit', [ProfileController::class, 'updateSubscription']);
     });
 });
