@@ -32,6 +32,18 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Role::class);
     }
 
+    public function businessProfile()
+    {
+        return $this->hasOne(BusinessProfile::class, 'user_id');
+    }
+
+    public function subscription()
+    {
+        return $this->hasOne(Subscription::class, 'business_user_id')
+            ->where('active', true)
+            ->latest();
+    }
+
     // Accessor for role name
     public function getRoleNameAttribute()
     {
