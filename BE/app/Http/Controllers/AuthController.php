@@ -117,9 +117,7 @@ class AuthController extends Controller
             unset($businessProfile->user);
             $user->business_profile = $businessProfile;
 
-            $subscription = Subscription::where('business_user_id', $user->id)
-                ->where('active', true)
-                ->first();
+            $subscription = $user->subscription;
             $user->subscription = $subscription;
         }
 
