@@ -26,7 +26,6 @@ class Subscription extends Model
     protected $appends = [
         'status',              
         'duration_in_days',    
-        'business_account_name',
     ];
 
     /**
@@ -38,15 +37,7 @@ class Subscription extends Model
         'yearly',  
     ];
 
-    // Relationships
-
-    /**
-     * Get the business user associated with the subscription.
-    */
-    public function businessUser()
-    {
-        return $this->belongsTo(User::class, 'business_user_id');
-    }
+    public $timestamps = false;
 
     // Scopes
 
@@ -85,14 +76,6 @@ class Subscription extends Model
             return $this->start_date->diffInDays($this->end_date);
         }
         return null;
-    }
-
-    /**
-     * Get the business account name associated with the subscription.
-    */
-    public function getBusinessAccountNameAttribute()
-    {
-        return $this->businessUser ? $this->businessUser->name : null;
     }
 
 }
