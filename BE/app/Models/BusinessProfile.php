@@ -21,6 +21,8 @@ class BusinessProfile extends Model
         'main_img',
     ];
 
+    public $timestamps = false;
+
     protected $appends = [
         'user_name',
     ];
