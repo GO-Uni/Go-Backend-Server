@@ -25,15 +25,12 @@ class BusinessProfile extends Model
 
     protected $appends = [
         'user_name',
+        'category_name',
     ];
 
-    /**
-     * Get the user associated with the business profile.
-     */
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+    protected $hidden = [
+        'category',
+    ];
 
     /**
      * Get the category associated with the business profile.
@@ -68,6 +65,14 @@ class BusinessProfile extends Model
      */
     public function getUserNameAttribute()
     {
-        return $this->user ? $this->user->name : null;
+        return User::find($this->user_id)->name ?? null;
+    }
+
+    /**
+     * Get the category's name associated with the business profile.
+     */
+    public function getCategoryNameAttribute()
+    {
+        return $this->category ? $this->category->name : null;
     }
 }
