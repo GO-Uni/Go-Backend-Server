@@ -40,8 +40,7 @@ class User extends Authenticatable implements JWTSubject
     public function subscription()
     {
         return $this->hasOne(Subscription::class, 'business_user_id')
-            ->where('active', true)
-            ->latest();
+            ->where('active', true);
     }
 
     // Accessor for role name
