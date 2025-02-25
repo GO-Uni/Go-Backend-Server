@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\CheckBusinessAuthorization;
+use App\Http\Controllers\CategoryController;
 
 // AuthController routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -23,3 +24,5 @@ Route::middleware('auth:api')->group(function () {
         Route::put('/business/subscription/edit', [ProfileController::class, 'updateSubscription']);
     });
 });
+
+Route::get('/categories', [CategoryController::class, 'index']);
