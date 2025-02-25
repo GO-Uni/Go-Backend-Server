@@ -17,6 +17,13 @@ class CategoriesTableSeeder extends Seeder
             ['name' => 'Hotel'],
             ['name' => 'Shopping Mall'],
             ['name' => 'Entertainment'],
+            ['name' => 'Historical Landmarks'],
+            ['name' => 'Natural Wonders'],
+            ['name' => 'Sports'],
+            ['name' => 'Aquatic Destinations'],
+            ['name' => 'Night Life'],
+            ['name' => 'Outdoor Activities'],
+            
         ];
 
         foreach ($categories as $category) {
