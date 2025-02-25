@@ -32,6 +32,7 @@ class ProfileController extends Controller
                 'opening_hour' => 'nullable|string',
                 'closing_hour' => 'nullable|string',
                 'main_img' => 'nullable|string',
+                'description' => 'nullable|string'
             ]);
         }
 
@@ -57,6 +58,7 @@ class ProfileController extends Controller
                     'opening_hour' => $request->opening_hour,
                     'closing_hour' => $request->closing_hour,
                     'main_img' => $request->main_img,
+                    'description' => $request->description,
                 ]);
             }
         }
