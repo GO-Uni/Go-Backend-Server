@@ -19,6 +19,7 @@ class BusinessProfile extends Model
         'opening_hour',
         'closing_hour',
         'main_img',
+        'description'
     ];
 
     public $timestamps = false;
