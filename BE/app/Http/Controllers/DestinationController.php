@@ -10,11 +10,35 @@ use App\Services\ApiResponseService;
 class DestinationController extends Controller
 {
     /**
-     * Get all destinations
+     * Get all destinations with active users
      */
     public function index()
     {
-        $destinations = BusinessProfile::all();
+        $destinations = BusinessProfile::whereHas('user', function ($query) {
+            $query->where('status', 'active');
+        })->get();
+
+        return ApiResponseService::success('Destinations retrieved successfully', $destinations);
+    }
+
+    /**
+     * Get all destinations grouped by user status
+     */
+    public function getGroupedByStatus()
+    {
+        $activeDestinations = BusinessProfile::whereHas('user', function ($query) {
+            $query->where('status', 'active');
+        })->get();
+
+        $bannedDestinations = BusinessProfile::whereHas('user', function ($query) {
+            $query->where('status', 'banned');
+        })->get();
+
+        $destinations = [
+            'active' => $activeDestinations,
+            'banned' => $bannedDestinations,
+        ];
+
         return ApiResponseService::success('Destinations retrieved successfully', $destinations);
     }
 
@@ -23,8 +47,12 @@ class DestinationController extends Controller
      */
     public function getByName($name)
     {
-        $name = ucfirst($name); // Ensure the first letter is uppercase
-        $destination = BusinessProfile::where('business_name', 'LIKE', "%$name%")->get();
+        $name = ucfirst($name);
+        $destination = BusinessProfile::where('business_name', 'LIKE', "%$name%")
+            ->whereHas('user', function ($query) {
+                $query->where('status', 'active');
+            })->get();
+
         return ApiResponseService::success('Destination retrieved successfully', $destination);
     }
 
@@ -35,12 +63,18 @@ class DestinationController extends Controller
     {
         // Check if the category is ID or name
         if (is_numeric($category)) {
-            $destinations = BusinessProfile::where('category_id', $category)->get();
+            $destinations = BusinessProfile::where('category_id', $category)
+                ->whereHas('user', function ($query) {
+                    $query->where('status', 'active');
+                })->get();
         } else {
-            $category = ucfirst($category); 
+            $category = ucfirst($category);
             $categoryModel = Category::where('name', 'LIKE', "%$category%")->first();
             if ($categoryModel) {
-                $destinations = BusinessProfile::where('category_id', $categoryModel->id)->get();
+                $destinations = BusinessProfile::where('category_id', $categoryModel->id)
+                    ->whereHas('user', function ($query) {
+                        $query->where('status', 'active');
+                    })->get();
             } else {
                 return ApiResponseService::error('Category not found', null, 404);
             }
@@ -54,7 +88,11 @@ class DestinationController extends Controller
      */
     public function getByDistrict($district)
     {
-        $destinations = BusinessProfile::where('district', 'ILIKE', "%$district%")->get();
+        $destinations = BusinessProfile::where('district', 'ILIKE', "%$district%")
+            ->whereHas('user', function ($query) {
+                $query->where('status', 'active');
+            })->get();
+
         return ApiResponseService::success('Destinations retrieved successfully', $destinations);
     }
 }
