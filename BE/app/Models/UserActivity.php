@@ -18,13 +18,15 @@ class UserActivity extends Model
     ];
 
     protected $casts = [
-        'activity_value' => 'float', 
+        'activity_value' => 'string', 
         'created_at' => 'datetime',  
     ];
 
     protected $appends = [
         'activity_type_name',
     ];
+
+    public $timestamps = false;
 
     // Relationships
 
