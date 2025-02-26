@@ -14,6 +14,8 @@ class SavedDestination extends Model
         'business_user_id', 
     ];
 
+    public $timestamps = false;
+
     // Relationships
 
     /**
