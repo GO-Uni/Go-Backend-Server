@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\CheckBusinessAuthorization;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DestinationController;
 
 // AuthController routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -25,4 +26,11 @@ Route::middleware('auth:api')->group(function () {
     });
 });
 
+// Categories
 Route::get('/categories', [CategoryController::class, 'index']);
+
+// Destinations
+Route::get('/destinations', [DestinationController::class, 'index']);
+Route::get('/destinations/name/{name}', [DestinationController::class, 'getByName']);
+Route::get('/destinations/category/{category}', [DestinationController::class, 'getByCategory']);
+Route::get('/destinations/district/{district}', [DestinationController::class, 'getByDistrict']);
