@@ -33,6 +33,12 @@ class BusinessProfile extends Model
         'category',
     ];
 
+    // Relationships
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     /**
      * Get the category associated with the business profile.
      */
