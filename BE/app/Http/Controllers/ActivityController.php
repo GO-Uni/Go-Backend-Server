@@ -97,16 +97,20 @@ class ActivityController extends Controller
 
         $request->validate([
             'business_user_id' => 'required|integer|exists:users,id',
-            'rating' => 'required|numeric|min:1|max:5',
+            'rating' => ['required', 'regex:/^(0(\.5)?|[1-4](\.5)?|5)$/'],
         ]);
 
         $activityType = ActivityType::where('name', 'rate')->first();
-        $userActivity = UserActivity::create([
-            'user_id' => $user->id,
-            'business_user_id' => $request->business_user_id,
-            'activity_type_id' => $activityType->id,
-            'activity_value' => (string) $request->rating,
-        ]);
+        $userActivity = UserActivity::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'business_user_id' => $request->business_user_id,
+                'activity_type_id' => $activityType->id,
+            ],
+            [
+                'activity_value' => (string) $request->rating,
+            ]
+        );
 
         return ApiResponseService::success('Destination rated successfully', ['user_activity' => $userActivity]);
     }
