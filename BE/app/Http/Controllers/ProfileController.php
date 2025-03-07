@@ -33,6 +33,7 @@ class ProfileController extends Controller
                 'closing_hour' => 'nullable|string',
                 'main_img' => 'nullable|string',
                 'description' => 'nullable|string',
+                'counter_booking' => 'nullable|integer',
             ]);
         }
 
@@ -82,6 +83,9 @@ class ProfileController extends Controller
                 }
                 if ($request->filled('description')) {
                     $businessProfileData['description'] = $request->description;
+                }
+                if ($request->filled('counter_booking')) {
+                    $businessProfileData['counter_booking'] = $request->counter_booking;
                 }
                 if (!empty($businessProfileData)) {
                     $businessProfile->update($businessProfileData);
