@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
+use Carbon\Exceptions\InvalidFormatException;
 
 class BusinessProfile extends Model
 {
@@ -28,6 +30,7 @@ class BusinessProfile extends Model
     protected $appends = [
         'user_name',
         'category_name',
+        'available_booking_slots',
     ];
 
     protected $hidden = [
@@ -82,5 +85,26 @@ class BusinessProfile extends Model
     public function getCategoryNameAttribute()
     {
         return $this->category ? $this->category->name : null;
+    }
+
+    /**
+     * Get the available booking slots for the business profile.
+     */
+    public function getAvailableBookingSlotsAttribute()
+    {
+        try {
+            $openingHour = Carbon::createFromFormat('H:i', substr($this->opening_hour, 0, 5));
+            $closingHour = Carbon::createFromFormat('H:i', substr($this->closing_hour, 0, 5));
+
+            $slots = [];
+            while ($openingHour->lt($closingHour)) {
+                $slots[] = $openingHour->format('H:i');
+                $openingHour->addHour();
+            }
+
+            return $slots;
+        } catch (InvalidFormatException $e) {
+            return [];
+        }
     }
 }
