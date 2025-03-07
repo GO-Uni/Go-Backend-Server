@@ -31,10 +31,12 @@ class BusinessProfile extends Model
         'user_name',
         'category_name',
         'available_booking_slots',
+        'subscription_details',
     ];
 
     protected $hidden = [
         'category',
+        'user',
     ];
 
     // Relationships
@@ -85,6 +87,26 @@ class BusinessProfile extends Model
     public function getCategoryNameAttribute()
     {
         return $this->category ? $this->category->name : null;
+    }
+
+    /**
+     * Get the subscription details associated with the business profile.
+     */
+    public function getSubscriptionDetailsAttribute()
+    {
+        $subscription = $this->user->subscription;
+        if ($subscription) {
+            return [
+                'id' => $subscription->id,
+                'type' => $subscription->type,
+                'start_date' => $subscription->start_date,
+                'end_date' => $subscription->end_date,
+                'price' => $subscription->price,
+                'status' => $subscription->status,
+                'duration_in_days' => $subscription->duration_in_days,
+            ];
+        }
+        return null;
     }
 
     /**
