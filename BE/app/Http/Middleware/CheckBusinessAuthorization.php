@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use App\Services\ApiResponseService;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class CheckBusinessAuthorization
 {
@@ -33,9 +34,17 @@ class CheckBusinessAuthorization
             return ApiResponseService::error('Business profile not found.', null, 404);
         }
 
-        // Check if subscription is active
-        if ($user->subscription && !$user->subscription->active) {
-            return ApiResponseService::error('Inactive business subscription.', null, 403);
+        // Check if subscription is active and within the valid date range
+        $subscription = $user->subscription;
+        if ($subscription) {
+            $currentDate = Carbon::now();
+            if ($subscription->end_date->lt($currentDate)) {
+                // Update subscription status to inactive
+                $subscription->update(['active' => false]);
+                return ApiResponseService::error('Inactive business subscription.', null, 403);
+            }
+        } else {
+            return ApiResponseService::error('No active subscription found.', null, 404);
         }
 
         return $next($request);
