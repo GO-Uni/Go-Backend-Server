@@ -6,9 +6,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use App\Services\ApiResponseService; 
+use App\Services\ApiResponseService;
 use App\Models\BusinessProfile;
 use App\Models\Subscription;
+use Stripe\Stripe;
+use Stripe\PaymentIntent;
 
 class AuthController extends Controller
 {
@@ -38,6 +40,7 @@ class AuthController extends Controller
                 'closing_hour' => 'nullable|string',
                 'main_img' => 'nullable|string',
                 'subscription_type' => 'required|string|in:monthly,yearly',
+                'payment_method' => 'required|string',
             ]);
         }
 
@@ -46,7 +49,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
-            'role_id' => $request->role_id, 
+            'role_id' => $request->role_id,
             'profile_img' => $request->profile_img ?? null,
         ]);
 
@@ -67,13 +70,36 @@ class AuthController extends Controller
             $startDate = now();
             $endDate = $request->subscription_type === 'monthly' ? $startDate->copy()->addMonth() : $startDate->copy()->addYear();
 
-            Subscription::create([
-                'business_user_id' => $user->id,
-                'type' => $request->subscription_type,
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'active' => true,
-            ]);
+            // Set the subscription price based on the type
+            $price = $request->subscription_type === 'monthly' ? 1499 : 14999; // Amount in cents
+
+            // Process the payment
+            Stripe::setApiKey(config('services.stripe.secret'));
+
+            try {
+                $paymentIntent = PaymentIntent::create([
+                    'amount' => $price,
+                    'currency' => 'usd',
+                    'payment_method' => $request->payment_method,
+                    'confirm' => true,
+                    'automatic_payment_methods' => [
+                        'enabled' => true,
+                        'allow_redirects' => 'never',
+                    ],
+                ]);
+
+                Subscription::create([
+                    'business_user_id' => $user->id,
+                    'type' => $request->subscription_type,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'active' => true,
+                    'price' => $price,
+                    'payment_status' => 'paid',
+                ]);
+            } catch (\Exception $e) {
+                return ApiResponseService::error($e->getMessage(), null, 500);
+            }
         }
 
         $token = JWTAuth::fromUser($user);
