@@ -125,7 +125,6 @@ class ProfileController extends Controller
                 'amount' => $price,
                 'currency' => 'usd',
                 'payment_method' => $request->payment_method,
-                'confirmation_method' => 'manual',
                 'confirm' => true,
                 'automatic_payment_methods' => [
                     'enabled' => true,
@@ -144,6 +143,7 @@ class ProfileController extends Controller
                     'end_date' => $newEndDate,
                     'price' => $price,
                     'payment_status' => 'paid',
+                    'active' => true,
                 ]);
             }
 
