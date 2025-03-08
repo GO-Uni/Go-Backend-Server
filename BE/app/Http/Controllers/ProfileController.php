@@ -110,6 +110,10 @@ class ProfileController extends Controller
 
         $subscription = Subscription::where('business_user_id', $user->id)->where('active', true)->first();
 
+        if (!$subscription) {
+            return ApiResponseService::error('No active subscription found.', null, 404);
+        }
+
         // Set the subscription price based on the type
         $price = $request->subscription_type === 'monthly' ? 1499 : 14999; // Amount in cents
 
@@ -121,6 +125,7 @@ class ProfileController extends Controller
                 'amount' => $price,
                 'currency' => 'usd',
                 'payment_method' => $request->payment_method,
+                'confirmation_method' => 'manual',
                 'confirm' => true,
                 'automatic_payment_methods' => [
                     'enabled' => true,
@@ -128,30 +133,15 @@ class ProfileController extends Controller
                 ],
             ]);
 
-            if ($subscription) {
-                // Check if the subscription type has changed
-                if ($subscription->type !== $request->subscription_type) {
-                    // Calculate the new end date based on the new subscription type
-                    $newEndDate = $request->subscription_type === 'monthly' ? $subscription->end_date->copy()->addMonth() : $subscription->end_date->copy()->addYear();
+            // Check if the subscription type has changed
+            if ($subscription->type !== $request->subscription_type) {
+                // Calculate the new end date based on the new subscription type
+                $newEndDate = $request->subscription_type === 'monthly' ? $subscription->end_date->copy()->addMonth() : $subscription->end_date->copy()->addYear();
 
-                    // Update the subscription
-                    $subscription->update([
-                        'type' => $request->subscription_type,
-                        'end_date' => $newEndDate,
-                        'price' => $price,
-                        'payment_status' => 'paid',
-                    ]);
-                }
-            } else {
-                // Create a new subscription
-                $newEndDate = $request->subscription_type === 'monthly' ? now()->addMonth() : now()->addYear();
-
-                $subscription = Subscription::create([
-                    'business_user_id' => $user->id,
+                // Update the subscription
+                $subscription->update([
                     'type' => $request->subscription_type,
-                    'start_date' => now(),
                     'end_date' => $newEndDate,
-                    'active' => true,
                     'price' => $price,
                     'payment_status' => 'paid',
                 ]);
