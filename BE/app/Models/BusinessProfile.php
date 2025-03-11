@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
+use Carbon\Exceptions\InvalidFormatException;
 
 class BusinessProfile extends Model
 {
@@ -19,7 +21,8 @@ class BusinessProfile extends Model
         'opening_hour',
         'closing_hour',
         'main_img',
-        'description'
+        'description',
+        'counter_booking',
     ];
 
     public $timestamps = false;
@@ -27,11 +30,20 @@ class BusinessProfile extends Model
     protected $appends = [
         'user_name',
         'category_name',
+        'available_booking_slots',
+        'subscription_details',
     ];
 
     protected $hidden = [
         'category',
+        'user',
     ];
+
+    // Relationships
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     /**
      * Get the category associated with the business profile.
@@ -75,5 +87,46 @@ class BusinessProfile extends Model
     public function getCategoryNameAttribute()
     {
         return $this->category ? $this->category->name : null;
+    }
+
+    /**
+     * Get the subscription details associated with the business profile.
+     */
+    public function getSubscriptionDetailsAttribute()
+    {
+        $subscription = $this->user->subscription;
+        if ($subscription) {
+            return [
+                'id' => $subscription->id,
+                'type' => $subscription->type,
+                'start_date' => $subscription->start_date,
+                'end_date' => $subscription->end_date,
+                'price' => $subscription->price,
+                'status' => $subscription->status,
+                'duration_in_days' => $subscription->duration_in_days,
+            ];
+        }
+        return null;
+    }
+
+    /**
+     * Get the available booking slots for the business profile.
+     */
+    public function getAvailableBookingSlotsAttribute()
+    {
+        try {
+            $openingHour = Carbon::createFromFormat('H:i', substr($this->opening_hour, 0, 5));
+            $closingHour = Carbon::createFromFormat('H:i', substr($this->closing_hour, 0, 5));
+
+            $slots = [];
+            while ($openingHour->lt($closingHour)) {
+                $slots[] = $openingHour->format('H:i');
+                $openingHour->addHour();
+            }
+
+            return $slots;
+        } catch (InvalidFormatException $e) {
+            return [];
+        }
     }
 }

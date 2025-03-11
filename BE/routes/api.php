@@ -31,6 +31,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/activity/unsave', [ActivityController::class, 'unsaveDestination']);
     Route::post('/activity/rate', [ActivityController::class, 'rateDestination']);
     Route::post('/activity/review', [ActivityController::class, 'reviewDestination']);
+    Route::post('/activity/book', [ActivityController::class, 'bookSlot']);
 });
 
 // Categories

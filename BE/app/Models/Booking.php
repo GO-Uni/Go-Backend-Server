@@ -10,14 +10,18 @@ class Booking extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',         
-        'business_user_id', 
-        'booking_time',     
+        'user_id',
+        'business_user_id',
+        'booking_time',
+        'booking_date',
     ];
 
     protected $casts = [
-        'booking_time' => 'datetime', 
+        'booking_time' => 'datetime',
+        'booking_date' => 'date',
     ];
+
+    public $timestamps = false;
 
     // Relationships
 

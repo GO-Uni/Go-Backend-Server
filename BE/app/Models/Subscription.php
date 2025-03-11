@@ -14,7 +14,8 @@ class Subscription extends Model
         'type',             
         'start_date',       
         'end_date',        
-        'active',           
+        'active',
+        'price',           
     ];
 
     protected $casts = [
