@@ -9,6 +9,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Services\ApiResponseService;
 use App\Models\BusinessProfile;
 use App\Models\Subscription;
+use App\Http\Middleware\CheckBusinessAuthorization; // Import the middleware
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 
@@ -127,6 +128,18 @@ class AuthController extends Controller
         unset($user->updated_at, $user->created_at);
 
         if ($user->role_id === 3) {
+            // Apply the CheckBusinessAuthorization middleware logic
+            $middleware = new CheckBusinessAuthorization();
+            $response = $middleware->handle($request, function () {
+                return null;
+            });
+
+            // If the middleware returns a response return it
+            if ($response) {
+                return $response;
+            }
+
+            // Add business profile and subscription details
             $businessProfile = $user->businessProfile;
             unset($businessProfile->user);
             $user->business_profile = $businessProfile;
