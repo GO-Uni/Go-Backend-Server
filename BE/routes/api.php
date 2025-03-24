@@ -44,3 +44,5 @@ Route::get('/destinations/name/{name}', [DestinationController::class, 'getByNam
 Route::get('/destinations/category/{category}', [DestinationController::class, 'getByCategory']);
 Route::get('/destinations/district/{district}', [DestinationController::class, 'getByDistrict']);
 Route::get('/destinations/bookings/{businessUserId}', [DestinationController::class, 'getBookingsBusiness']);
+Route::get('/destinations/reviews/{businessUserId}', [DestinationController::class, 'getReviews']);
+Route::get('/destinations/rating/{businessUserId}', [DestinationController::class, 'getRating']);

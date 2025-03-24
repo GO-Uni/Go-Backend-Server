@@ -24,7 +24,14 @@ class DestinationController extends Controller
             // List all review values
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 3)
-                ->pluck('activity_value');
+                ->with('user')
+                ->get()
+                ->map(function ($review) {
+                    return [
+                        'review_value' => $review->activity_value,
+                        'user_name' => $review->user->name ?? 'Unknown',
+                    ];
+                });
 
             // Calculate the average rating
             $rating = UserActivity::where('business_user_id', $destination->user_id)
@@ -71,7 +78,14 @@ class DestinationController extends Controller
         foreach ($activeDestinations as $destination) {
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 3)
-                ->pluck('activity_value');
+                ->with('user')
+                ->get()
+                ->map(function ($review) {
+                    return [
+                        'review_value' => $review->activity_value,
+                        'user_name' => $review->user->name ?? 'Unknown',
+                    ];
+                });
 
             $rating = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 2)
@@ -100,7 +114,14 @@ class DestinationController extends Controller
         foreach ($bannedDestinations as $destination) {
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 3)
-                ->pluck('activity_value');
+                ->with('user')
+                ->get()
+                ->map(function ($review) {
+                    return [
+                        'review_value' => $review->activity_value,
+                        'user_name' => $review->user->name ?? 'Unknown',
+                    ];
+                });
 
             $rating = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 2)
@@ -148,7 +169,14 @@ class DestinationController extends Controller
         foreach ($destination as $dest) {
             $reviews = UserActivity::where('business_user_id', $dest->user_id)
                 ->where('activity_type_id', 3)
-                ->pluck('activity_value');
+                ->with('user')
+                ->get()
+                ->map(function ($review) {
+                    return [
+                        'review_value' => $review->activity_value,
+                        'user_name' => $review->user->name ?? 'Unknown',
+                    ];
+                });
 
             $rating = UserActivity::where('business_user_id', $dest->user_id)
                 ->where('activity_type_id', 2)
@@ -203,7 +231,14 @@ class DestinationController extends Controller
         foreach ($destinations as $destination) {
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 3)
-                ->pluck('activity_value');
+                ->with('user')
+                ->get()
+                ->map(function ($review) {
+                    return [
+                        'review_value' => $review->activity_value,
+                        'user_name' => $review->user->name ?? 'Unknown',
+                    ];
+                });
 
             $rating = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 2)
@@ -245,7 +280,14 @@ class DestinationController extends Controller
         foreach ($destinations as $destination) {
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 3)
-                ->pluck('activity_value');
+                ->with('user')
+                ->get()
+                ->map(function ($review) {
+                    return [
+                        'review_value' => $review->activity_value,
+                        'user_name' => $review->user->name ?? 'Unknown',
+                    ];
+                });
 
             $rating = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 2)
@@ -274,8 +316,6 @@ class DestinationController extends Controller
         return ApiResponseService::success('Destinations retrieved successfully', $destinations);
     }
 
-
-
     /**
      * Get all bookings of a business user by their business_user_id
      */
@@ -289,5 +329,46 @@ class DestinationController extends Controller
         }
 
         return ApiResponseService::success('Bookings retrieved successfully', $bookings);
+    }
+
+    /**
+     * Get all reviews of a business user by their business_user_id
+     */
+    public function getReviews($businessUserId)
+    {
+        // Fetch all reviews with the user name
+        $reviews = UserActivity::where('business_user_id', $businessUserId)
+            ->where('activity_type_id', 3)
+            ->with('user')
+            ->get()
+            ->map(function ($review) {
+                return [
+                    'review_value' => $review->activity_value,
+                    'user_name' => $review->user->name ?? 'Unknown',
+                ];
+            });
+
+        if ($reviews->isEmpty()) {
+            return ApiResponseService::error('No reviews found for this business user.', null, 404);
+        }
+
+        return ApiResponseService::success('Reviews retrieved successfully', $reviews);
+    }
+
+    /**
+     * Get the average rating of a business user by their business_user_id
+     */
+    public function getRating($businessUserId)
+    {
+        // Fetch all ratings for the given business_user_id and calculate the average
+        $rating = UserActivity::where('business_user_id', $businessUserId)
+            ->where('activity_type_id', 2)
+            ->pluck('activity_value')
+            ->map(function ($value) {
+                return (float) $value;
+            })
+            ->avg() ?? 0; // Set to 0 if no ratings
+
+        return ApiResponseService::success('Rating retrieved successfully', ['rating' => $rating]);
     }
 }
