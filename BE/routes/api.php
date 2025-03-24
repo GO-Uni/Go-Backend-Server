@@ -43,3 +43,4 @@ Route::get('/destinations/grouped', [DestinationController::class, 'getGroupedBy
 Route::get('/destinations/name/{name}', [DestinationController::class, 'getByName']);
 Route::get('/destinations/category/{category}', [DestinationController::class, 'getByCategory']);
 Route::get('/destinations/district/{district}', [DestinationController::class, 'getByDistrict']);
+Route::get('/destinations/bookings/{businessUserId}', [DestinationController::class, 'getBookingsBusiness']);
