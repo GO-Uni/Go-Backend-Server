@@ -9,7 +9,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Services\ApiResponseService;
 use App\Models\BusinessProfile;
 use App\Models\Subscription;
-use App\Http\Middleware\CheckBusinessAuthorization; // Import the middleware
+use App\Http\Middleware\CheckBusinessAuthorization; 
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 
