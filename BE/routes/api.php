@@ -51,3 +51,4 @@ Route::get('/destinations/rating/{businessUserId}', [DestinationController::clas
 
 // User
 Route::get('/user/{userId}/bookings', [UserController::class, 'getUserBookings']);
+Route::get('/user/{userId}/saved', [UserController::class, 'getSavedDestinations']);

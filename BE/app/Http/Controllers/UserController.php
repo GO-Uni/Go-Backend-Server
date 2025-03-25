@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Booking;
 use App\Models\User;
 use App\Services\ApiResponseService;
+use App\Models\SavedDestination;
 
 class UserController extends Controller
 {
@@ -31,5 +32,28 @@ class UserController extends Controller
         }
 
         return ApiResponseService::success('Bookings retrieved successfully', $bookings);
+    }
+
+    /**
+     * Get all saved destinations of a user
+     */
+    public function getSavedDestinations($userId)
+    {
+        // Fetch all saved destinations
+        $savedDestinations = SavedDestination::where('user_id', $userId)
+            ->with(['businessUser'])
+            ->get()
+            ->map(function ($destination) {
+                return [
+                    'business_user_name' => $destination->businessUser->name ?? 'Unknown',
+                    'destination_id' => $destination->id,
+                ];
+            });
+
+        if ($savedDestinations->isEmpty()) {
+            return ApiResponseService::error('No saved destinations found for this user.', null, 404);
+        }
+
+        return ApiResponseService::success('Saved destinations retrieved successfully', $savedDestinations);
     }
 }
