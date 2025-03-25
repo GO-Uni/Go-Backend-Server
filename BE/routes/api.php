@@ -7,6 +7,7 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Middleware\CheckBusinessAuthorization;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DestinationController;
+use App\Http\Controllers\UserController;
 
 // AuthController routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -43,3 +44,11 @@ Route::get('/destinations/grouped', [DestinationController::class, 'getGroupedBy
 Route::get('/destinations/name/{name}', [DestinationController::class, 'getByName']);
 Route::get('/destinations/category/{category}', [DestinationController::class, 'getByCategory']);
 Route::get('/destinations/district/{district}', [DestinationController::class, 'getByDistrict']);
+Route::get('/destinations/bookings/{businessUserId}', [DestinationController::class, 'getBookingsBusiness']);
+Route::get('/destinations/reviews/{businessUserId}', [DestinationController::class, 'getReviews']);
+Route::get('/destinations/rating/{businessUserId}', [DestinationController::class, 'getRating']);
+
+
+// User
+Route::get('/user/{userId}/bookings', [UserController::class, 'getUserBookings']);
+Route::get('/user/{userId}/saved', [UserController::class, 'getSavedDestinations']);
