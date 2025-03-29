@@ -18,7 +18,7 @@ class UserActivityController extends Controller
         $activities = UserActivity::where('user_id', $userId)->get();
 
         if ($activities->isEmpty()) {
-            return ApiResponseService::error('No activities found for this user.', null, 404);
+            return ApiResponseService::error('No activities found for this user.', null, 200);
         }
 
         return ApiResponseService::success('User activities retrieved successfully.', $activities);
