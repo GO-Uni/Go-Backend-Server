@@ -349,7 +349,7 @@ class DestinationController extends Controller
             });
 
         if ($reviews->isEmpty()) {
-            return ApiResponseService::error('No reviews found for this business user.', null, 404);
+            return ApiResponseService::error('No reviews found for this business user.', null, 204);
         }
 
         return ApiResponseService::success('Reviews retrieved successfully', $reviews);
