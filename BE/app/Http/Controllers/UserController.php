@@ -40,20 +40,23 @@ class UserController extends Controller
     public function getSavedDestinations($userId)
     {
         // Fetch all saved destinations
-        $savedDestinations = SavedDestination::where('user_id', $userId)
-            ->with(['businessUser'])
-            ->get()
-            ->map(function ($destination) {
-                return [
-                    'business_user_name' => $destination->businessUser->name ?? 'Unknown',
-                    'destination_id' => $destination->id,
-                ];
-            });
+        $savedDestinations = SavedDestination::where('user_id', $userId)->get();
 
         if ($savedDestinations->isEmpty()) {
             return ApiResponseService::error('No saved destinations found for this user.', null, 404);
         }
 
-        return ApiResponseService::success('Saved destinations retrieved successfully', $savedDestinations);
+        // Initialize the DestinationController
+        $destinationController = app(\App\Http\Controllers\DestinationController::class);
+
+        // Map saved destinations and trigger the getByUserId method 
+        $detailedDestinations = $savedDestinations->map(function ($destination) use ($destinationController) {
+            $response = $destinationController->getByUserId($destination->business_user_id);
+
+            $responseData = json_decode($response->getContent(), true); 
+            return $responseData['data'][0] ?? null; 
+        });
+
+        return ApiResponseService::success('Saved destinations retrieved successfully', $detailedDestinations);
     }
 }
