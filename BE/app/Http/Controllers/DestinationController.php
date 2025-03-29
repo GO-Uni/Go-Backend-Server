@@ -20,6 +20,10 @@ class DestinationController extends Controller
             $query->where('status', 'active');
         })->get();
 
+        if ($destinations->isEmpty()) {
+            return ApiResponseService::error('No destinations found.', null, 200);
+        }
+
         foreach ($destinations as $destination) {
             // List all review values
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
@@ -166,6 +170,63 @@ class DestinationController extends Controller
                 $query->where('status', 'active');
             })->get();
 
+        if ($destination->isEmpty()) {
+            return ApiResponseService::error('No destination found.', null, 200);
+        }
+
+        foreach ($destination as $dest) {
+            $reviews = UserActivity::where('business_user_id', $dest->user_id)
+                ->where('activity_type_id', 3)
+                ->with('user')
+                ->get()
+                ->map(function ($review) {
+                    return [
+                        'review_value' => $review->activity_value,
+                        'user_name' => $review->user->name ?? 'Unknown',
+                    ];
+                });
+
+            $rating = UserActivity::where('business_user_id', $dest->user_id)
+                ->where('activity_type_id', 2)
+                ->pluck('activity_value')
+                ->map(function ($value) {
+                    return (float) $value;
+                })
+                ->avg() ?? 0;
+
+            $dest->reviews = $reviews;
+            $dest->rating = $rating;
+
+            $bookings = Booking::where('business_user_id', $dest->user_id)
+                ->get()
+                ->map(function ($booking) {
+                    return [
+                        'user_name' => $booking->user->name,
+                        'booking_time' => $booking->booking_time,
+                        'booking_date' => $booking->booking_date,
+                    ];
+                });
+
+            $dest->bookings = $bookings;
+        }
+
+        return ApiResponseService::success('Destination retrieved successfully', $destination);
+    }
+
+    /**
+     * Get a destination by its ID
+     */
+    public function getById($id)
+    {
+        $destination = BusinessProfile::where('id', $id)
+            ->whereHas('user', function ($query) {
+                $query->where('status', 'active');
+            })->get();
+
+        if ($destination->isEmpty()) {
+            return ApiResponseService::error('No destination found.', null, 200);
+        }
+
         foreach ($destination as $dest) {
             $reviews = UserActivity::where('business_user_id', $dest->user_id)
                 ->where('activity_type_id', 3)
@@ -228,6 +289,10 @@ class DestinationController extends Controller
             }
         }
 
+        if ($destinations->isEmpty()) {
+            return ApiResponseService::error('No destinations found.', null, 200);
+        }
+
         foreach ($destinations as $destination) {
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 3)
@@ -276,6 +341,10 @@ class DestinationController extends Controller
             ->whereHas('user', function ($query) {
                 $query->where('status', 'active');
             })->get();
+
+        if ($destinations->isEmpty()) {
+            return ApiResponseService::error('No destinations found.', null, 200);
+        }
 
         foreach ($destinations as $destination) {
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
