@@ -27,7 +27,9 @@ class OpenAIService
                 'messages' => [
                     [
                         'role' => 'user',
-                        'content' => "Based on the following user activities, recommend the most liked categories. Just give the names under each other" . json_encode($activities)
+                        'content' => "Analyze the following user activities and recommend the most liked categories based on their interactions. 
+                                      Focus on categories with the highest engagement (saves, high ratings, or positive reviews). 
+                                      Format the response as category names under each other only." . json_encode($activities)
                     ]
                 ],
                 'max_tokens' => 100,
