@@ -8,6 +8,7 @@ use App\Http\Middleware\CheckBusinessAuthorization;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserActivityController;
 
 // AuthController routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -53,3 +54,7 @@ Route::get('/destinations/rating/{businessUserId}', [DestinationController::clas
 // User
 Route::get('/user/{userId}/bookings', [UserController::class, 'getUserBookings']);
 Route::get('/user/{userId}/saved', [UserController::class, 'getSavedDestinations']);
+
+
+// Recommendation 
+Route::get('/recommend-destinations/{userId}', [UserActivityController::class, 'recommendDestinations']);
