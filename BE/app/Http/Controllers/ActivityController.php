@@ -102,7 +102,18 @@ class ActivityController extends Controller
             'rating' => ['required', 'regex:/^(0(\.5)?|[1-4](\.5)?|5)$/'],
         ]);
 
+        // Getting the category name of the destination
+        $businessProfile = BusinessProfile::where('user_id', $request->business_user_id)->first();
+        if (!$businessProfile) {
+            return ApiResponseService::error('Business profile not found.', null, 404);
+        }
+
+        $categoryName = $businessProfile->category->name;
+
+        // Get the activity type for "rate"
         $activityType = ActivityType::where('name', 'rate')->first();
+
+        // Create or Update record
         $userActivity = UserActivity::updateOrCreate(
             [
                 'user_id' => $user->id,
@@ -111,6 +122,7 @@ class ActivityController extends Controller
             ],
             [
                 'activity_value' => (string) $request->rating,
+                'category' => $categoryName,
             ]
         );
 
@@ -129,12 +141,21 @@ class ActivityController extends Controller
             'review' => 'required|string',
         ]);
 
+        // Getting the category name of the destination
+        $businessProfile = BusinessProfile::where('user_id', $request->business_user_id)->first();
+        if (!$businessProfile) {
+            return ApiResponseService::error('Business profile not found.', null, 404);
+        }
+
+        $categoryName = $businessProfile->category->name;
+
         $activityType = ActivityType::where('name', 'review')->first();
         $userActivity = UserActivity::create([
             'user_id' => $user->id,
             'business_user_id' => $request->business_user_id,
             'activity_type_id' => $activityType->id,
             'activity_value' => $request->review,
+            'category' => $categoryName,
         ]);
 
         return ApiResponseService::success('Destination reviewed successfully', ['user_activity' => $userActivity]);
