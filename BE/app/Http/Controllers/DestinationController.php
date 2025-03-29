@@ -216,9 +216,9 @@ class DestinationController extends Controller
     /**
      * Get a destination by its ID
      */
-    public function getById($id)
+    public function getByUserId($userId)
     {
-        $destination = BusinessProfile::where('id', $id)
+        $destination = BusinessProfile::where('user_id', $userId)
             ->whereHas('user', function ($query) {
                 $query->where('status', 'active');
             })->get();

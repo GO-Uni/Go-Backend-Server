@@ -42,7 +42,7 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/destinations', [DestinationController::class, 'index']);
 Route::get('/destinations/grouped', [DestinationController::class, 'getGroupedByStatus']);
 Route::get('/destinations/name/{name}', [DestinationController::class, 'getByName']);
-Route::get('/destinations/{id}', [DestinationController::class, 'getById']);
+Route::get('/destinations/{userId}', [DestinationController::class, 'getByUserId']);
 Route::get('/destinations/category/{category}', [DestinationController::class, 'getByCategory']);
 Route::get('/destinations/district/{district}', [DestinationController::class, 'getByDistrict']);
 Route::get('/destinations/bookings/{businessUserId}', [DestinationController::class, 'getBookingsBusiness']);
