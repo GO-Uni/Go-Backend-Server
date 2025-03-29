@@ -40,8 +40,17 @@ class UserActivityController extends Controller
         // Extract activities data
         $activities = $activitiesResponse->getData()->data;
 
+        // Filter each activity to only include the required fields
+        $filteredActivities = collect($activities)->map(function ($activity) {
+            return [
+                'activity_type_name' => $activity->activity_type_name,
+                'activity_value' => $activity->activity_value,
+                'category' => $activity->category
+            ];
+        })->all();
+
         // Get recommendations from OpenAI
-        $recommendations = $openAIService->getRecommendations($activities);
+        $recommendations = $openAIService->getRecommendations($filteredActivities);
 
         // Extract recommended categories from the OpenAI response
         $categories = explode("\n", trim($recommendations)); // Split by newline and trim whitespace
