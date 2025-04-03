@@ -8,6 +8,7 @@ use App\Http\Middleware\CheckBusinessAuthorization;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserActivityController;
 
 // AuthController routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -42,6 +43,7 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/destinations', [DestinationController::class, 'index']);
 Route::get('/destinations/grouped', [DestinationController::class, 'getGroupedByStatus']);
 Route::get('/destinations/name/{name}', [DestinationController::class, 'getByName']);
+Route::get('/destinations/{userId}', [DestinationController::class, 'getByUserId']);
 Route::get('/destinations/category/{category}', [DestinationController::class, 'getByCategory']);
 Route::get('/destinations/district/{district}', [DestinationController::class, 'getByDistrict']);
 Route::get('/destinations/bookings/{businessUserId}', [DestinationController::class, 'getBookingsBusiness']);
@@ -52,3 +54,7 @@ Route::get('/destinations/rating/{businessUserId}', [DestinationController::clas
 // User
 Route::get('/user/{userId}/bookings', [UserController::class, 'getUserBookings']);
 Route::get('/user/{userId}/saved', [UserController::class, 'getSavedDestinations']);
+
+
+// Recommendation 
+Route::get('/recommend-destinations/{userId}', [UserActivityController::class, 'recommendDestinations']);
