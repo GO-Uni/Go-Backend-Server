@@ -7,6 +7,8 @@ use App\Models\Booking;
 use App\Models\User;
 use App\Services\ApiResponseService;
 use App\Models\SavedDestination;
+use Illuminate\Support\Facades\Auth;
+use App\Models\UserActivity;
 
 class UserController extends Controller
 {
@@ -53,10 +55,36 @@ class UserController extends Controller
         $detailedDestinations = $savedDestinations->map(function ($destination) use ($destinationController) {
             $response = $destinationController->getByUserId($destination->business_user_id);
 
-            $responseData = json_decode($response->getContent(), true); 
-            return $responseData['data'][0] ?? null; 
+            $responseData = json_decode($response->getContent(), true);
+            return $responseData['data'][0] ?? null;
         });
 
         return ApiResponseService::success('Saved destinations retrieved successfully', $detailedDestinations);
+    }
+
+    /**
+     * Check if the authenticated user has rated a specific business user
+     */
+    public function checkIfUserRated($businessUserId)
+    {
+        // Get the authenticated user
+        $user = Auth::user();
+
+        // Check if the user is authenticated
+        if (!$user) {
+            return ApiResponseService::error('User not authenticated.', null, 401);
+        }
+
+        // Check if the user has rated the business user with activity type ID = 2
+        $hasRated = UserActivity::where('user_id', $user->id)
+            ->where('business_user_id', $businessUserId)
+            ->where('activity_type_id', 2) // 2 is the ID for "rate"
+            ->exists();
+
+        if ($hasRated) {
+            return ApiResponseService::success('User has rated this business user.', ['rated' => true]);
+        }
+
+        return ApiResponseService::success('User has not rated this business user.', ['rated' => false]);
     }
 }
