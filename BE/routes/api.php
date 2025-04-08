@@ -34,6 +34,10 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/activity/rate', [ActivityController::class, 'rateDestination']);
     Route::post('/activity/review', [ActivityController::class, 'reviewDestination']);
     Route::post('/activity/book', [ActivityController::class, 'bookSlot']);
+
+    // User 
+    Route::get('/user/check-rated/{businessUserId}', [UserController::class, 'checkIfUserRated']);
+
 });
 
 // Categories
@@ -54,7 +58,6 @@ Route::get('/destinations/rating/{businessUserId}', [DestinationController::clas
 // User
 Route::get('/user/{userId}/bookings', [UserController::class, 'getUserBookings']);
 Route::get('/user/{userId}/saved', [UserController::class, 'getSavedDestinations']);
-
 
 // Recommendation 
 Route::get('/recommend-destinations/{userId}', [UserActivityController::class, 'recommendDestinations']);
