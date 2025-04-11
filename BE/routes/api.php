@@ -61,3 +61,4 @@ Route::get('/user/{userId}/saved', [UserController::class, 'getSavedDestinations
 
 // Recommendation 
 Route::get('/recommend-destinations/{userId}', [UserActivityController::class, 'recommendDestinations']);
+Route::post('/{userId}/chatbot', [UserActivityController::class, 'chatbotResponse']);
