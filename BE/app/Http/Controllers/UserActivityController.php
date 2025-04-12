@@ -6,9 +6,17 @@ use App\Models\BusinessProfile;
 use App\Models\UserActivity;
 use App\Services\OpenAIService;
 use App\Services\ApiResponseService;
+use App\Models\Category;
 
 class UserActivityController extends Controller
 {
+    protected $openAIService;
+
+    public function __construct(OpenAIService $openAIService)
+    {
+        $this->openAIService = $openAIService;
+    }
+
     /**
      * Get all activities of a user
      */
@@ -63,5 +71,103 @@ class UserActivityController extends Controller
             ->get();
 
         return ApiResponseService::success('Recommended destinations retrieved successfully.', $destinations);
+    }
+
+    public function chatbotResponse($userId)
+    {
+        // Retrieve the userMessage from the request body
+        $userMessage = request()->input('userMessage');
+
+        if (!$userMessage) {
+            return ApiResponseService::error("The 'userMessage' field is required.", null, 400);
+        }
+
+        // Use OpenAI to extract the destination name or category from the user message
+        $aiResponse = $this->openAIService->nameDetector(
+            "Extract the destination name or category from this sentence: \"$userMessage\". If no destination or category is found, respond with 'None'."
+        );
+
+        if (empty($aiResponse)) {
+            return ApiResponseService::error("Unable to process your request at the moment.", null, 500);
+        }
+
+        $extractedName = trim($aiResponse);
+
+        if (strtolower($extractedName) === 'none') {
+            return $this->fallbackToRecommendations($userId, $userMessage);
+        }
+
+        // Match the extracted name with a category using AI
+        $matchedCategory = $this->matchCategory($extractedName);
+
+        if ($matchedCategory) {
+            // Fetch destinations in the matched category
+            $categoryDestinations = BusinessProfile::where('category_id', $matchedCategory->id)->get();
+
+            if ($categoryDestinations->isNotEmpty()) {
+                return ApiResponseService::success(
+                    "Here are some destinations in the category '{$matchedCategory->name}':",
+                    $categoryDestinations
+                );
+            }
+        }
+
+        // Check if the extracted name matches a specific destination
+        $specificDestination = BusinessProfile::where('business_name', 'LIKE', '%' . $extractedName . '%')->first();
+
+        if ($specificDestination) {
+            return ApiResponseService::success(
+                "Here is some information about {$specificDestination->business_name}:",
+                $specificDestination
+            );
+        }
+
+        // Fallback to recommendations if no match is found
+        return $this->fallbackToRecommendations($userId, $userMessage);
+    }
+
+    /**
+     * Match the extracted name with a category from the database using AI.
+     */
+    private function matchCategory($extractedName)
+    {
+        // Fetch all categories from the database
+        $categories = Category::pluck('name')->toArray(); 
+
+        // Convert category names to a comma-separated string for AI
+        $categoriesList = implode(', ', $categories);
+
+        // capitalize first letter
+        $normalizedInput = ucfirst(strtolower(trim($extractedName)));
+
+        // Use OpenAI to match the input with the closest category
+        $aiResponse = $this->openAIService->nameDetector(
+            "From the following list of categories: [$categoriesList], determine which category best matches the input: \"$normalizedInput\". If no match is found, respond with 'None'."
+        );
+
+        $matchedCategoryName = ucfirst(strtolower(trim($aiResponse))); 
+
+        if (strtolower($matchedCategoryName) === 'none') {
+            return null; 
+        }
+
+        // Find and return the matched category from the database
+        return Category::whereRaw('LOWER(name) = ?', [strtolower($matchedCategoryName)])->first();
+    }
+
+    private function fallbackToRecommendations($userId, $userMessage)
+    {
+        $recommendationsResponse = $this->recommendDestinations($userId, $this->openAIService);
+
+        if ($recommendationsResponse->getStatusCode() !== 200) {
+            return ApiResponseService::error('Unable to fetch recommendations at the moment.', null, 500);
+        }
+
+        $destinations = $recommendationsResponse->getData()->data;
+
+        $response = "Based on your recent activities, the recommended places are: ";
+        $response .= $this->openAIService->generateChatbotResponse($userMessage, $destinations);
+
+        return ApiResponseService::success($response, $destinations);
     }
 }
