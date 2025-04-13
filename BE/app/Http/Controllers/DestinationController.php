@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\UserActivity;
 use App\Services\ApiResponseService;
 use App\Models\Booking;
+use App\Models\User;
 
 class DestinationController extends Controller
 {
@@ -71,92 +72,63 @@ class DestinationController extends Controller
      */
     public function getGroupedByStatus()
     {
-        $activeDestinations = BusinessProfile::whereHas('user', function ($query) {
-            $query->where('status', 'active');
-        })->get();
+        // Fetch all users excluding admins (role_id = 1)
+        $users = User::where('role_id', '!=', 1)->get();
 
-        $bannedDestinations = BusinessProfile::whereHas('user', function ($query) {
-            $query->where('status', 'banned');
-        })->get();
+        $normalUsersActive = [];
+        $businessUsersActive = [];
+        $bannedUsers = [];
 
-        foreach ($activeDestinations as $destination) {
-            $reviews = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 3)
-                ->with('user')
-                ->get()
-                ->map(function ($review) {
-                    return [
-                        'review_value' => $review->activity_value,
-                        'user_name' => $review->user->name ?? 'Unknown',
+        foreach ($users as $user) {
+            if ($user->status === 'active') {
+                if ($user->role_id === 2) { // Normal user
+                    $normalUsersActive[] = [
+                        'name' => $user->name,
+                        'email' => $user->email,
                     ];
-                });
+                } elseif ($user->role_id === 3) { // Business user
+                    $businessProfiles = BusinessProfile::where('user_id', $user->id)->get();
+                    foreach ($businessProfiles as $profile) {
+                        // Fetch subscription details dynamically
+                        $subscriptionDetails = $profile->subscription_details;
 
-            $rating = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 2)
-                ->pluck('activity_value')
-                ->map(function ($value) {
-                    return (float) $value;
-                })
-                ->avg() ?? 0;
-
-            $destination->reviews = $reviews;
-            $destination->rating = $rating;
-
-            $bookings = Booking::where('business_user_id', $destination->user_id)
-                ->get()
-                ->map(function ($booking) {
-                    return [
-                        'user_name' => $booking->user->name,
-                        'booking_time' => $booking->booking_time,
-                        'booking_date' => $booking->booking_date,
-                    ];
-                });
-
-            $destination->bookings = $bookings;
+                        $businessUsersActive[] = [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'business_name' => $profile->business_name,
+                            'category' => $profile->category->name ?? 'Unknown',
+                            'district' => $profile->district,
+                            'hours' => date('H:i', strtotime($profile->opening_hour)) . '-' . date('H:i', strtotime($profile->closing_hour)),
+                            'subscription' => $subscriptionDetails['type'] ?? 'None',
+                        ];
+                    }
+                }
+            } elseif ($user->status === 'banned') {
+                $bannedUsers[] = [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role_id === 2 ? 'Normal User' : 'Business User',
+                ];
+            }
         }
 
-        foreach ($bannedDestinations as $destination) {
-            $reviews = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 3)
-                ->with('user')
-                ->get()
-                ->map(function ($review) {
-                    return [
-                        'review_value' => $review->activity_value,
-                        'user_name' => $review->user->name ?? 'Unknown',
-                    ];
-                });
-
-            $rating = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 2)
-                ->pluck('activity_value')
-                ->map(function ($value) {
-                    return (float) $value;
-                })
-                ->avg() ?? 0;
-
-            $destination->reviews = $reviews;
-            $destination->rating = $rating;
-
-            $bookings = Booking::where('business_user_id', $destination->user_id)
-                ->get()
-                ->map(function ($booking) {
-                    return [
-                        'user_name' => $booking->user->name,
-                        'booking_time' => $booking->booking_time,
-                        'booking_date' => $booking->booking_date,
-                    ];
-                });
-
-            $destination->bookings = $bookings;
-        }
-
-        $destinations = [
-            'active' => $activeDestinations,
-            'banned' => $bannedDestinations,
+        $result = [
+            'normal_users_active' => [
+                'count' => count($normalUsersActive),
+                'users' => $normalUsersActive,
+            ],
+            'business_users_active' => [
+                'count' => count($businessUsersActive),
+                'users' => $businessUsersActive,
+            ],
+            'banned_users' => [
+                'count' => count($bannedUsers),
+                'users' => $bannedUsers,
+            ],
         ];
 
-        return ApiResponseService::success('Destinations retrieved successfully', $destinations);
+        return ApiResponseService::success('Users grouped by status retrieved successfully', $result);
     }
 
     /**
