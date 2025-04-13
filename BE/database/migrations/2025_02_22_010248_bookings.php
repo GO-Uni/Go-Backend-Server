@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('business_user_id');
-            $table->timestamp('booking_time');
+            $table->time('booking_time');
 
             // Foreign Keys
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
