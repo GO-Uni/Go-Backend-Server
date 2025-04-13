@@ -40,6 +40,10 @@ class UserActivityController extends Controller
         // Fetch user activities
         $activitiesResponse = $this->getUserActivities($userId);
 
+        // return response()->json([
+        //     "data"=> $activitiesResponse->getData()
+        // ]);
+
         // Check if activities exist
         if ($activitiesResponse->getStatusCode() !== 200) {
             return $activitiesResponse;
@@ -132,7 +136,7 @@ class UserActivityController extends Controller
     private function matchCategory($extractedName)
     {
         // Fetch all categories from the database
-        $categories = Category::pluck('name')->toArray(); 
+        $categories = Category::pluck('name')->toArray();
 
         // Convert category names to a comma-separated string for AI
         $categoriesList = implode(', ', $categories);
@@ -145,10 +149,10 @@ class UserActivityController extends Controller
             "From the following list of categories: [$categoriesList], determine which category best matches the input: \"$normalizedInput\". If no match is found, respond with 'None'."
         );
 
-        $matchedCategoryName = ucfirst(strtolower(trim($aiResponse))); 
+        $matchedCategoryName = ucfirst(strtolower(trim($aiResponse)));
 
         if (strtolower($matchedCategoryName) === 'none') {
-            return null; 
+            return null;
         }
 
         // Find and return the matched category from the database
