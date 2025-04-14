@@ -138,7 +138,6 @@ class DestinationController extends Controller
      */
     public function getByName($name)
     {
-        $name = ucfirst($name);
         $destination = BusinessProfile::where('business_name', 'LIKE', "%$name%")
             ->whereHas('user', function ($query) {
                 $query->where('status', 'active');
