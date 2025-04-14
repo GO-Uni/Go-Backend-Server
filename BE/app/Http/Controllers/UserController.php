@@ -76,13 +76,16 @@ class UserController extends Controller
         }
 
         // Check if the user has rated the business user with activity type ID = 2
-        $hasRated = UserActivity::where('user_id', $user->id)
+        $userActivity = UserActivity::where('user_id', $user->id)
             ->where('business_user_id', $businessUserId)
             ->where('activity_type_id', 2) // 2 is the ID for "rate"
-            ->exists();
+            ->first();
 
-        if ($hasRated) {
-            return ApiResponseService::success('User has rated this business user.', ['rated' => true]);
+        if ($userActivity) {
+            return ApiResponseService::success('User has rated this business user.', [
+                'rated' => true,
+                'rating' => $userActivity->activity_value, 
+            ]);
         }
 
         return ApiResponseService::success('User has not rated this business user.', ['rated' => false]);

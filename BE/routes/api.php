@@ -4,11 +4,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\AdminController;
 use App\Http\Middleware\CheckBusinessAuthorization;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserActivityController;
+use App\Http\Middleware\AdminCheck;
 
 // AuthController routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -38,6 +40,11 @@ Route::middleware('auth:api')->group(function () {
     // User 
     Route::get('/user/check-rated/{businessUserId}', [UserController::class, 'checkIfUserRated']);
 
+    // Admin
+    Route::middleware(AdminCheck::class)->group(function () {
+        Route::post('/users/ban', [AdminController::class, 'banUser']);
+        Route::post('/users/unban', [AdminController::class, 'unbanUser']);
+    });
 });
 
 // Categories

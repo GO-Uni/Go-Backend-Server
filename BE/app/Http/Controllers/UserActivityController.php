@@ -72,7 +72,21 @@ class UserActivityController extends Controller
             $query->whereIn('name', $categories);
         })
             ->inRandomOrder()
-            ->get();
+            ->get()
+            ->map(function ($destination) {
+                // Add the rating for each destination
+                $rating = UserActivity::where('business_user_id', $destination->user_id)
+                    ->where('activity_type_id', 2)
+                    ->pluck('activity_value')
+                    ->map(function ($value) {
+                        return (float) $value;
+                    })
+                    ->avg() ?? 0;
+
+                $destination->rating = $rating;
+
+                return $destination;
+            });
 
         return ApiResponseService::success('Recommended destinations retrieved successfully.', $destinations);
     }
