@@ -100,9 +100,9 @@ class UserActivityController extends Controller
             return ApiResponseService::error("The 'userMessage' field is required.", null, 400);
         }
 
-        // Use OpenAI to extract the destination name or category from the user message
+        // Use OpenAI to extract the destination name, category, or district from the user message
         $aiResponse = $this->openAIService->nameDetector(
-            "Extract the destination name or category from this sentence: \"$userMessage\". If no destination or category is found, respond with 'None'."
+            "Extract the destination name, category, or district from this sentence: \"$userMessage\". If no destination, category, or district is found, respond with 'None'."
         );
 
         if (empty($aiResponse)) {
@@ -112,7 +112,20 @@ class UserActivityController extends Controller
         $extractedName = trim($aiResponse);
 
         if (strtolower($extractedName) === 'none') {
-            return $this->fallbackToRecommendations($userId, $userMessage);
+            return ApiResponseService::error(
+                "No destinations, categories, or districts were found based on your input. Here are some recommendations based on your recent activities:",
+                $this->fallbackToRecommendations($userId, $userMessage)->getData()->data
+            );
+        }
+
+        // Check if the extracted name matches a district
+        $districtBusinesses = BusinessProfile::where('district', 'LIKE', '%' . $extractedName . '%')->get();
+
+        if ($districtBusinesses->isNotEmpty()) {
+            return ApiResponseService::success(
+                "Here are some businesses in the district '{$extractedName}':",
+                $districtBusinesses
+            );
         }
 
         // Match the extracted name with a category using AI
@@ -141,7 +154,10 @@ class UserActivityController extends Controller
         }
 
         // Fallback to recommendations if no match is found
-        return $this->fallbackToRecommendations($userId, $userMessage);
+        return ApiResponseService::success(
+            "No exact matches were found. Based on your recent activities, here are some recommended places:",
+            $this->fallbackToRecommendations($userId, $userMessage)->getData()->data
+        );
     }
 
     /**
