@@ -9,7 +9,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Services\ApiResponseService;
 use App\Models\BusinessProfile;
 use App\Models\Subscription;
-use App\Http\Middleware\CheckBusinessAuthorization; 
+use App\Http\Middleware\CheckBusinessAuthorization;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 
@@ -149,6 +149,27 @@ class AuthController extends Controller
         }
 
         return ApiResponseService::success('Login successful', compact('user', 'token'));
+    }
+
+    /**
+     * Admin login and return only a JWT token.
+     */
+    public function adminLogin(Request $request)
+    {
+        $credentials = $request->only('email', 'password');
+
+        if (!$token = JWTAuth::attempt($credentials)) {
+            return ApiResponseService::error('Unauthorized', null, 401);
+        }
+
+        $user = Auth::user();
+
+        // Check if the user is an admin
+        if ($user->role_id !== 1) { 
+            return ApiResponseService::error('Forbidden: Only admins can log in here', null, 403);
+        }
+
+        return ApiResponseService::success('Admin login successful', ['token' => $token]);
     }
 
     /**

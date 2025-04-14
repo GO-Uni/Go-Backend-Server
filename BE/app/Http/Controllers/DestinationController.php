@@ -83,6 +83,7 @@ class DestinationController extends Controller
             if ($user->status === 'active') {
                 if ($user->role_id === 2) { // Normal user
                     $normalUsersActive[] = [
+                        'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
                     ];
@@ -106,6 +107,7 @@ class DestinationController extends Controller
                 }
             } elseif ($user->status === 'banned') {
                 $bannedUsers[] = [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role_id === 2 ? 'Normal User' : 'Business User',
