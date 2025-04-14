@@ -11,6 +11,7 @@ use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserActivityController;
 use App\Http\Middleware\AdminCheck;
+use App\Http\Controllers\ImageController;
 
 // AuthController routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -47,6 +48,11 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/users/ban', [AdminController::class, 'banUser']);
         Route::post('/users/unban', [AdminController::class, 'unbanUser']);
     });
+
+    // Images
+    Route::get('/users/{user}/get/images', [ImageController::class, 'index']);
+    Route::post('/users/{user}/images', [ImageController::class, 'store']);
+    Route::delete('/users/{user}/delete/images', [ImageController::class, 'destroy']);
 });
 
 // Categories
