@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\ApiResponseService;
+use App\Services\ImageService;
 use App\Models\User;
 use App\Models\BusinessProfile;
 use App\Models\Subscription;
@@ -13,14 +14,20 @@ use Stripe\PaymentIntent;
 
 class ProfileController extends Controller
 {
+    protected $imageService;
+
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
+
     public function updateProfile(Request $request)
     {
-        $user = Auth::user();
+        $user = User::find(Auth::id());
 
         // Validate common fields
         $request->validate([
             'name' => 'nullable|string',
-            'profile_img' => 'nullable|string',
         ]);
 
         // Validate business fields if the user is a business
@@ -33,7 +40,6 @@ class ProfileController extends Controller
                 'longitude' => 'nullable|numeric',
                 'opening_hour' => 'nullable|string',
                 'closing_hour' => 'nullable|string',
-                'main_img' => 'nullable|string',
                 'description' => 'nullable|string',
                 'counter_booking' => 'nullable|integer',
             ]);
@@ -79,9 +85,6 @@ class ProfileController extends Controller
                 }
                 if ($request->filled('closing_hour')) {
                     $businessProfileData['closing_hour'] = $request->closing_hour;
-                }
-                if ($request->filled('main_img')) {
-                    $businessProfileData['main_img'] = $request->main_img;
                 }
                 if ($request->filled('description')) {
                     $businessProfileData['description'] = $request->description;
@@ -167,5 +170,58 @@ class ProfileController extends Controller
         } catch (\Exception $e) {
             return ApiResponseService::error($e->getMessage(), null, 500);
         }
+    }
+
+    public function uploadProfileImage(Request $request)
+    {
+        $userId = Auth::id();
+        $user = User::findOrFail($userId);
+
+        // Validate the uploaded file
+        $request->validate([
+            'profile_img' => 'required|image|max:2048',
+        ]);
+
+        $uploadedImagePath = $this->imageService->uploadImage($request->file('profile_img'), $user);
+
+        // Delete the old profile image if it exists
+        if ($user->profile_img) {
+            $this->imageService->deleteImage([$user->profile_img]);
+        }
+
+        // Update the user's profile image
+        $user->update(['profile_img' => $uploadedImagePath]);
+
+        return ApiResponseService::success('Profile image updated successfully', ['profile_img' => $uploadedImagePath]);
+    }
+
+    public function uploadBusinessMainImage(Request $request)
+    {
+        $user = Auth::user();
+
+        // Ensure the user is a business
+        if ($user->role_id !== 3) {
+            return ApiResponseService::error('Only business users can upload main images.', null, 403);
+        }
+
+        // Validate the uploaded file
+        $request->validate([
+            'main_img' => 'required|image|max:2048',
+        ]);
+
+        $uploadedImages = $this->imageService->uploadImages($request->file('main_img'), $user);
+
+        $businessProfile = BusinessProfile::where('user_id', $user->id)->first();
+        if ($businessProfile && !empty($uploadedImages)) {
+            // Delete the old main image if it exists
+            if ($businessProfile->main_img) {
+                $this->imageService->deleteImage([$businessProfile->main_img]);
+            }
+
+            // Update the business profile's main image
+            $businessProfile->update(['main_img' => $uploadedImages[0]->path_name]);
+        }
+
+        return ApiResponseService::success('Business main image updated successfully', ['main_img' => $uploadedImages[0]->path_name]);
     }
 }
