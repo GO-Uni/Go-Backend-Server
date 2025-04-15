@@ -59,11 +59,16 @@ class ImageService
 
     private function generateS3Path(UploadedFile $image, int $userId): string
     {
+        $timestamp = now()->timestamp;
+        $originalNameWithoutExt = pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $image->getClientOriginalExtension();
+
         return sprintf(
-            'users/%d/%s-%s',
+            'users/%d/%s-%s.%s',
             $userId,
-            now()->timestamp,
-            Str::slug($image->getClientOriginalName())
+            $timestamp,
+            Str::slug($originalNameWithoutExt),
+            $extension
         );
     }
 }
