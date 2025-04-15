@@ -55,7 +55,11 @@ class OpenAIService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => "You are an assistant chatbot. You can fetch specific destinations from the database or recommend destinations based on user preferences. You can only talk about destinations or recommendations."
+                        'content' => "You are a travel assistant chatbot that helps users find 
+                                        specific destinations (by name, category, or district)
+                                        or get personalized recommendations based on their preferences.
+                                        Only respond to destination-related requests—politely guide users 
+                                        back to travel topics if they ask unrelated questions."
                     ],
                     [
                         'role' => 'user',
@@ -71,30 +75,29 @@ class OpenAIService
     }
 
     public function nameDetector($userQuery)
-{
-    $response = $this->client->post('https://api.openai.com/v1/chat/completions', [
-        'headers' => [
-            'Authorization' => 'Bearer ' . $this->apiKey,
-            'Content-Type' => 'application/json',
-        ],
-        'json' => [
-            'model' => 'gpt-3.5-turbo',
-            'messages' => [
-                [
-                    'role' => 'system',
-                    'content' => "You are an assistant that extracts destination names from user queries. If no destination is found, respond with 'None'. List only the name"
-                ],
-                [
-                    'role' => 'user',
-                    'content' => $userQuery
-                ]
+    {
+        $response = $this->client->post('https://api.openai.com/v1/chat/completions', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type' => 'application/json',
             ],
-            'max_tokens' => 50,
-        ],
-    ]);
+            'json' => [
+                'model' => 'gpt-3.5-turbo',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => "You are an assistant that extracts destination names from user queries. If no destination is found, respond with 'None'. List only the name"
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $userQuery
+                    ]
+                ],
+                'max_tokens' => 50,
+            ],
+        ]);
 
-    $data = json_decode($response->getBody(), true);
-    return $data['choices'][0]['message']['content'] ?? "None";
-}
-
+        $data = json_decode($response->getBody(), true);
+        return $data['choices'][0]['message']['content'] ?? "None";
+    }
 }

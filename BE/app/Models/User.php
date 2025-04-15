@@ -44,6 +44,11 @@ class User extends Authenticatable implements JWTSubject
             ->where('active', true);
     }
 
+    public function images()
+    {
+        return $this->hasMany(Image::class);
+    }
+
     // Accessor for role name
     public function getRoleNameAttribute()
     {

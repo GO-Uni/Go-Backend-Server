@@ -4,24 +4,21 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Image extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'business_profile_id', 
-        'path_name',          
+        'user_id',
+        'path_name',
     ];
 
-     // Relationships
-
-    /**
-     * Get the business profile associated with the image.
-     */
-    public function businessProfile()
+    // Relationships    
+    public function user()
     {
-        return $this->belongsTo(BusinessProfile::class);
+        return $this->belongsTo(User::class);
     }
 
     // Scopes
