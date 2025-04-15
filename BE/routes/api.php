@@ -27,6 +27,9 @@ Route::middleware('auth:api')->group(function () {
 
     Route::put('/profile/edit', [ProfileController::class, 'updateProfile']);
 
+    Route::post('/profile/upload-profile-image', [ProfileController::class, 'uploadProfileImage']);
+    Route::post('/profile/upload-business-main-image', [ProfileController::class, 'uploadBusinessMainImage']);
+
     // Routes that require business authorization
     Route::middleware(CheckBusinessAuthorization::class)->group(function () {
         Route::put('/business/profile/edit', [ProfileController::class, 'updateProfile']);

@@ -44,12 +44,21 @@ class UploadImageToS3 implements ShouldQueue
 
         if (file_exists($localPath)) {
             try {
-                Storage::disk('s3')->put($this->s3Path, file_get_contents($localPath));
+                Storage::disk('s3')->put($this->s3Path, file_get_contents($localPath), 'public');
+
                 unlink($localPath);
 
                 Log::info('File uploaded successfully to S3', ['s3Path' => $this->s3Path]);
             } catch (\Exception $e) {
-                Log::error('Failed to upload file to S3', ['error' => $e->getMessage()]);
+                Log::error('Failed to upload file to S3', [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    's3Path' => $this->s3Path,
+                    'localPath' => $localPath
+                ]);
+
                 $this->fail($e);
             }
         } else {
