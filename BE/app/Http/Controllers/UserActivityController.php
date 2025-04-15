@@ -112,7 +112,7 @@ class UserActivityController extends Controller
         $extractedName = trim($aiResponse);
 
         if (strtolower($extractedName) === 'none') {
-            return ApiResponseService::error(
+            return ApiResponseService::success(
                 "No destinations, categories, or districts were found based on your input. Here are some recommendations based on your recent activities:",
                 $this->fallbackToRecommendations($userId, $userMessage)->getData()->data
             );
