@@ -7,6 +7,7 @@ use App\Models\UserActivity;
 use App\Services\OpenAIService;
 use App\Services\ApiResponseService;
 use App\Models\Category;
+use Illuminate\Support\Facades\Storage;
 
 class UserActivityController extends Controller
 {
@@ -15,6 +16,11 @@ class UserActivityController extends Controller
     public function __construct(OpenAIService $openAIService)
     {
         $this->openAIService = $openAIService;
+    }
+
+    private function getImageUrl(?string $path): ?string
+    {
+        return $path ? Storage::disk('s3')->url($path) : null;
     }
 
     /**
@@ -84,6 +90,7 @@ class UserActivityController extends Controller
                     ->avg() ?? 0;
 
                 $destination->rating = $rating;
+                $destination->main_img = $this->getImageUrl($destination->main_img);
 
                 return $destination;
             });

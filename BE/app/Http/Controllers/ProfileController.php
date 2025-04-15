@@ -12,6 +12,9 @@ use App\Models\Subscription;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 class ProfileController extends Controller
 {
     protected $imageService;
@@ -174,25 +177,43 @@ class ProfileController extends Controller
 
     public function uploadProfileImage(Request $request)
     {
-        $userId = Auth::id();
-        $user = User::findOrFail($userId);
+        $user = Auth::user();
 
-        // Validate the uploaded file
         $request->validate([
             'profile_img' => 'required|image|max:2048',
         ]);
 
-        $uploadedImagePath = $this->imageService->uploadImage($request->file('profile_img'), $user);
+        // Upload to S3 and get the relative path
+        $path = $this->imageService->uploadImage($request->file('profile_img'), $user);
 
-        // Delete the old profile image if it exists
+        // Delete old user profile image if exists
         if ($user->profile_img) {
             $this->imageService->deleteImage([$user->profile_img]);
         }
 
-        // Update the user's profile image
-        $user->update(['profile_img' => $uploadedImagePath]);
+        // Save to users.profile_img
+        $user->update(['profile_img' => $path]);
 
-        return ApiResponseService::success('Profile image updated successfully', ['profile_img' => $uploadedImagePath]);
+        $response = [
+            'profile_img' => Storage::disk('s3')->url($path),
+        ];
+
+        // If business user, also update business_profiles.main_img
+        if ($user->role_id === 3) {
+            $businessProfile = BusinessProfile::where('user_id', $user->id)->first();
+
+            if ($businessProfile) {
+                // Delete old business main_img if exists
+                if ($businessProfile->main_img) {
+                    $this->imageService->deleteImage([$businessProfile->main_img]);
+                }
+
+                $businessProfile->update(['main_img' => $path]);
+                $response['main_img'] = Storage::disk('s3')->url($path);
+            }
+        }
+
+        return ApiResponseService::success('Profile image updated successfully', $response);
     }
 
     public function uploadBusinessMainImage(Request $request)
@@ -213,15 +234,26 @@ class ProfileController extends Controller
 
         $businessProfile = BusinessProfile::where('user_id', $user->id)->first();
         if ($businessProfile && !empty($uploadedImages)) {
-            // Delete the old main image if it exists
+
             if ($businessProfile->main_img) {
                 $this->imageService->deleteImage([$businessProfile->main_img]);
             }
+    
+            $path = $uploadedImages[0]->path_name;
+    
+            $businessProfile->update(['main_img' => $path]);
+    
 
-            // Update the business profile's main image
-            $businessProfile->update(['main_img' => $uploadedImages[0]->path_name]);
+            $url = Storage::disk('s3')->url($path);
+    
+            return ApiResponseService::success('Business main image updated successfully', [
+                'main_img' => $url,
+            ]);
         }
-
-        return ApiResponseService::success('Business main image updated successfully', ['main_img' => $uploadedImages[0]->path_name]);
+    
+        return ApiResponseService::success('Business main image updated successfully', [
+            'main_img' => $uploadedImages[0]->path_name,
+            'main_img_url' => Storage::disk('s3')->url($uploadedImages[0]->path_name),
+        ]);
     }
 }

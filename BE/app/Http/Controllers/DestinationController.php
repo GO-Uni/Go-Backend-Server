@@ -9,9 +9,14 @@ use App\Models\UserActivity;
 use App\Services\ApiResponseService;
 use App\Models\Booking;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 class DestinationController extends Controller
 {
+    private function getImageUrl(?string $path): ?string
+    {
+        return $path && trim($path) !== '' ? Storage::disk('s3')->url($path) : null;
+    }
     /**
      * Get all destinations with active users
      */
@@ -26,7 +31,8 @@ class DestinationController extends Controller
         }
 
         foreach ($destinations as $destination) {
-            // List all review values
+            $destination->main_img = $this->getImageUrl($destination->main_img);
+        
             $reviews = UserActivity::where('business_user_id', $destination->user_id)
                 ->where('activity_type_id', 3)
                 ->with('user')
@@ -37,33 +43,17 @@ class DestinationController extends Controller
                         'user_name' => $review->user->name ?? 'Unknown',
                     ];
                 });
-
-            // Calculate the average rating
-            $rating = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 2)
-                ->pluck('activity_value')
-                ->map(function ($value) {
-                    return (float) $value;
-                })
-                ->avg() ?? 0; // Set to 0 if no ratings
-
-            $destination->reviews = $reviews;
-            $destination->rating = $rating;
-
-            // Fetch bookings
-            $bookings = Booking::where('business_user_id', $destination->user_id)
-                ->get()
-                ->map(function ($booking) {
-                    return [
-                        'user_name' => $booking->user->name,
-                        'booking_time' => $booking->booking_time,
-                        'booking_date' => $booking->booking_date,
-                    ];
-                });
-
-            $destination->bookings = $bookings;
+        
+            $destination->rating = UserActivity::where('business_user_id', $destination->user_id)
+                ->where('activity_type_id', 2)->pluck('activity_value')->map(fn($v) => (float)$v)->avg() ?? 0;
+        
+            $destination->bookings = Booking::where('business_user_id', $destination->user_id)->get()->map(fn($b) => [
+                'user_name' => $b->user->name,
+                'booking_time' => $b->booking_time,
+                'booking_date' => $b->booking_date,
+            ]);
         }
-
+        
         return ApiResponseService::success('Destinations retrieved successfully', $destinations);
     }
 
@@ -133,57 +123,34 @@ class DestinationController extends Controller
         return ApiResponseService::success('Users grouped by status retrieved successfully', $result);
     }
 
-    /**
-     * Get a destination by name
-     */
+    private function enrichDestination($dest)
+    {
+        $dest->main_img = $this->getImageUrl($dest->main_img);
+        $dest->reviews = UserActivity::where('business_user_id', $dest->user_id)
+            ->where('activity_type_id', 3)->with('user')->get()->map(fn($r) => [
+                'review_value' => $r->activity_value,
+                'user_name' => $r->user->name ?? 'Unknown',
+            ]);
+
+        $dest->rating = UserActivity::where('business_user_id', $dest->user_id)
+            ->where('activity_type_id', 2)->pluck('activity_value')->map(fn($v) => (float)$v)->avg() ?? 0;
+
+        $dest->bookings = Booking::where('business_user_id', $dest->user_id)->get()->map(fn($b) => [
+            'user_name' => $b->user->name,
+            'booking_time' => $b->booking_time,
+            'booking_date' => $b->booking_date,
+        ]);
+    }
+
     public function getByName($name)
     {
-        $destination = BusinessProfile::where('business_name', 'LIKE', "%$name%")
-            ->whereHas('user', function ($query) {
-                $query->where('status', 'active');
-            })->get();
+        $destinations = BusinessProfile::where('business_name', 'LIKE', "%$name%")
+            ->whereHas('user', fn($q) => $q->where('status', 'active'))->get();
 
-        if ($destination->isEmpty()) {
-            return ApiResponseService::error('No destination found.', null, 200);
-        }
+        if ($destinations->isEmpty()) return ApiResponseService::error('No destination found.', null, 200);
+        foreach ($destinations as $d) $this->enrichDestination($d);
 
-        foreach ($destination as $dest) {
-            $reviews = UserActivity::where('business_user_id', $dest->user_id)
-                ->where('activity_type_id', 3)
-                ->with('user')
-                ->get()
-                ->map(function ($review) {
-                    return [
-                        'review_value' => $review->activity_value,
-                        'user_name' => $review->user->name ?? 'Unknown',
-                    ];
-                });
-
-            $rating = UserActivity::where('business_user_id', $dest->user_id)
-                ->where('activity_type_id', 2)
-                ->pluck('activity_value')
-                ->map(function ($value) {
-                    return (float) $value;
-                })
-                ->avg() ?? 0;
-
-            $dest->reviews = $reviews;
-            $dest->rating = $rating;
-
-            $bookings = Booking::where('business_user_id', $dest->user_id)
-                ->get()
-                ->map(function ($booking) {
-                    return [
-                        'user_name' => $booking->user->name,
-                        'booking_time' => $booking->booking_time,
-                        'booking_date' => $booking->booking_date,
-                    ];
-                });
-
-            $dest->bookings = $bookings;
-        }
-
-        return ApiResponseService::success('Destination retrieved successfully', $destination);
+        return ApiResponseService::success('Destination retrieved successfully', $destinations);
     }
 
     /**
@@ -191,52 +158,13 @@ class DestinationController extends Controller
      */
     public function getByUserId($userId)
     {
-        $destination = BusinessProfile::where('user_id', $userId)
-            ->whereHas('user', function ($query) {
-                $query->where('status', 'active');
-            })->get();
+        $destinations = BusinessProfile::where('user_id', $userId)
+            ->whereHas('user', fn($q) => $q->where('status', 'active'))->get();
 
-        if ($destination->isEmpty()) {
-            return ApiResponseService::error('No destination found.', null, 200);
-        }
+        if ($destinations->isEmpty()) return ApiResponseService::error('No destination found.', null, 200);
+        foreach ($destinations as $d) $this->enrichDestination($d);
 
-        foreach ($destination as $dest) {
-            $reviews = UserActivity::where('business_user_id', $dest->user_id)
-                ->where('activity_type_id', 3)
-                ->with('user')
-                ->get()
-                ->map(function ($review) {
-                    return [
-                        'review_value' => $review->activity_value,
-                        'user_name' => $review->user->name ?? 'Unknown',
-                    ];
-                });
-
-            $rating = UserActivity::where('business_user_id', $dest->user_id)
-                ->where('activity_type_id', 2)
-                ->pluck('activity_value')
-                ->map(function ($value) {
-                    return (float) $value;
-                })
-                ->avg() ?? 0;
-
-            $dest->reviews = $reviews;
-            $dest->rating = $rating;
-
-            $bookings = Booking::where('business_user_id', $dest->user_id)
-                ->get()
-                ->map(function ($booking) {
-                    return [
-                        'user_name' => $booking->user->name,
-                        'booking_time' => $booking->booking_time,
-                        'booking_date' => $booking->booking_date,
-                    ];
-                });
-
-            $dest->bookings = $bookings;
-        }
-
-        return ApiResponseService::success('Destination retrieved successfully', $destination);
+        return ApiResponseService::success('Destination retrieved successfully', $destinations);
     }
 
     /**
@@ -244,63 +172,17 @@ class DestinationController extends Controller
      */
     public function getByCategory($category)
     {
-        if (is_numeric($category)) {
-            $destinations = BusinessProfile::where('category_id', $category)
-                ->whereHas('user', function ($query) {
-                    $query->where('status', 'active');
-                })->get();
-        } else {
-            $category = ucfirst($category);
+        if (!is_numeric($category)) {
             $categoryModel = Category::where('name', 'LIKE', "%$category%")->first();
-            if ($categoryModel) {
-                $destinations = BusinessProfile::where('category_id', $categoryModel->id)
-                    ->whereHas('user', function ($query) {
-                        $query->where('status', 'active');
-                    })->get();
-            } else {
-                return ApiResponseService::error('Category not found', null, 404);
-            }
+            if (!$categoryModel) return ApiResponseService::error('Category not found', null, 404);
+            $category = $categoryModel->id;
         }
 
-        if ($destinations->isEmpty()) {
-            return ApiResponseService::error('No destinations found.', null, 200);
-        }
+        $destinations = BusinessProfile::where('category_id', $category)
+            ->whereHas('user', fn($q) => $q->where('status', 'active'))->get();
 
-        foreach ($destinations as $destination) {
-            $reviews = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 3)
-                ->with('user')
-                ->get()
-                ->map(function ($review) {
-                    return [
-                        'review_value' => $review->activity_value,
-                        'user_name' => $review->user->name ?? 'Unknown',
-                    ];
-                });
-
-            $rating = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 2)
-                ->pluck('activity_value')
-                ->map(function ($value) {
-                    return (float) $value;
-                })
-                ->avg() ?? 0;
-
-            $destination->reviews = $reviews;
-            $destination->rating = $rating;
-
-            $bookings = Booking::where('business_user_id', $destination->user_id)
-                ->get()
-                ->map(function ($booking) {
-                    return [
-                        'user_name' => $booking->user->name,
-                        'booking_time' => $booking->booking_time,
-                        'booking_date' => $booking->booking_date,
-                    ];
-                });
-
-            $destination->bookings = $bookings;
-        }
+        if ($destinations->isEmpty()) return ApiResponseService::error('No destinations found.', null, 200);
+        foreach ($destinations as $d) $this->enrichDestination($d);
 
         return ApiResponseService::success('Destinations retrieved successfully', $destinations);
     }
@@ -311,49 +193,10 @@ class DestinationController extends Controller
     public function getByDistrict($district)
     {
         $destinations = BusinessProfile::where('district', 'ILIKE', "%$district%")
-            ->whereHas('user', function ($query) {
-                $query->where('status', 'active');
-            })->get();
+            ->whereHas('user', fn($q) => $q->where('status', 'active'))->get();
 
-        if ($destinations->isEmpty()) {
-            return ApiResponseService::error('No destinations found.', null, 200);
-        }
-
-        foreach ($destinations as $destination) {
-            $reviews = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 3)
-                ->with('user')
-                ->get()
-                ->map(function ($review) {
-                    return [
-                        'review_value' => $review->activity_value,
-                        'user_name' => $review->user->name ?? 'Unknown',
-                    ];
-                });
-
-            $rating = UserActivity::where('business_user_id', $destination->user_id)
-                ->where('activity_type_id', 2)
-                ->pluck('activity_value')
-                ->map(function ($value) {
-                    return (float) $value;
-                })
-                ->avg() ?? 0;
-
-            $destination->reviews = $reviews;
-            $destination->rating = $rating;
-
-            $bookings = Booking::where('business_user_id', $destination->user_id)
-                ->get()
-                ->map(function ($booking) {
-                    return [
-                        'user_name' => $booking->user->name,
-                        'booking_time' => $booking->booking_time,
-                        'booking_date' => $booking->booking_date,
-                    ];
-                });
-
-            $destination->bookings = $bookings;
-        }
+        if ($destinations->isEmpty()) return ApiResponseService::error('No destinations found.', null, 200);
+        foreach ($destinations as $d) $this->enrichDestination($d);
 
         return ApiResponseService::success('Destinations retrieved successfully', $destinations);
     }
@@ -365,10 +208,7 @@ class DestinationController extends Controller
     {
         // Fetch all bookings for the given business_user_id
         $bookings = Booking::where('business_user_id', $businessUserId)->get();
-
-        if ($bookings->isEmpty()) {
-            return ApiResponseService::error('No bookings found for this business user.', null, 404);
-        }
+        if ($bookings->isEmpty()) return ApiResponseService::error('No bookings found for this business user.', null, 404);
 
         return ApiResponseService::success('Bookings retrieved successfully', $bookings);
     }
@@ -381,18 +221,13 @@ class DestinationController extends Controller
         // Fetch all reviews with the user name
         $reviews = UserActivity::where('business_user_id', $businessUserId)
             ->where('activity_type_id', 3)
-            ->with('user')
-            ->get()
-            ->map(function ($review) {
-                return [
-                    'review_value' => $review->activity_value,
-                    'user_name' => $review->user->name ?? 'Unknown',
-                ];
-            });
+            ->with('user')->get()
+            ->map(fn($r) => [
+                'review_value' => $r->activity_value,
+                'user_name' => $r->user->name ?? 'Unknown',
+            ]);
 
-        if ($reviews->isEmpty()) {
-            return ApiResponseService::error('No reviews found for this business user.', null, 204);
-        }
+        if ($reviews->isEmpty()) return ApiResponseService::error('No reviews found for this business user.', null, 204);
 
         return ApiResponseService::success('Reviews retrieved successfully', $reviews);
     }
@@ -406,10 +241,8 @@ class DestinationController extends Controller
         $rating = UserActivity::where('business_user_id', $businessUserId)
             ->where('activity_type_id', 2)
             ->pluck('activity_value')
-            ->map(function ($value) {
-                return (float) $value;
-            })
-            ->avg() ?? 0; // Set to 0 if no ratings
+            ->map(fn($v) => (float)$v)
+            ->avg() ?? 0;
 
         return ApiResponseService::success('Rating retrieved successfully', ['rating' => $rating]);
     }

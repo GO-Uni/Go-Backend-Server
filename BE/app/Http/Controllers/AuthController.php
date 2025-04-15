@@ -13,6 +13,9 @@ use App\Http\Middleware\CheckBusinessAuthorization;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 class AuthController extends Controller
 {
     /**
@@ -180,16 +183,21 @@ class AuthController extends Controller
         $user = Auth::user();
         $user->role_name = $user->role->name;
         unset($user->updated_at, $user->created_at);
-
+    
+        // Convert relative path to full S3 URL if present
+        if ($user->profile_img) {
+            $user->profile_img = Storage::disk('s3')->url($user->profile_img);
+        }
+    
         if ($user->role_id === 3) {
             $businessProfile = $user->businessProfile;
             unset($businessProfile->user);
             $user->business_profile = $businessProfile;
-
+    
             $subscription = $user->subscription;
             $user->subscription = $subscription;
         }
-
+    
         return ApiResponseService::success('Authenticated user retrieved successfully', ['user' => $user]);
     }
 
