@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Services\ImageService;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ImageController extends Controller
 {
@@ -13,9 +15,16 @@ class ImageController extends Controller
     public function index(User $user)
     {
         $images = $user->images()->get()->map(function ($image) {
+            $url = Storage::disk('s3')->url($image->path_name);
+
+            // Fix protocol-relative URL (e.g., //...) to use https
+            if (Str::startsWith($url, '//')) {
+                $url = 'https:' . $url;
+            }
+
             return [
                 'id' => $image->id,
-                'url' => $image->url, 
+                'url' => $url,
                 'path_name' => $image->path_name,
                 'created_at' => $image->created_at
             ];
