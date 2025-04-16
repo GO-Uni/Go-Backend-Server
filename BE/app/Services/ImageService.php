@@ -19,12 +19,18 @@ class ImageService
      * @param User $user
      * @return array
      */
-    public function uploadImages($files, User $user): array
+    public function uploadImages(array $imageData, User $user): array
     {
         $uploadedImages = [];
 
-        // Convert single file to array if needed
-        foreach (Arr::wrap($files) as $file) {
+        foreach ($imageData as $imageItem) {
+            if (!isset($imageItem['file']) || !is_array($imageItem)) {
+                continue;
+            }
+
+            $file = $imageItem['file'];
+            $is3d = filter_var($imageItem['is_3d'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
             if (!$file->isValid()) {
                 continue;
             }
@@ -34,7 +40,8 @@ class ImageService
 
             $imageRecord = Image::create([
                 'user_id' => $user->id,
-                'path_name' => $s3Path
+                'path_name' => $s3Path,
+                'is_3d' => $is3d
             ]);
 
             UploadImageToS3::dispatch($tempPath, $s3Path);

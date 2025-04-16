@@ -13,6 +13,7 @@ class Image extends Model
     protected $fillable = [
         'user_id',
         'path_name',
+        'is_3d',
     ];
 
     // Relationships    

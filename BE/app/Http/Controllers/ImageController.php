@@ -26,6 +26,7 @@ class ImageController extends Controller
                 'id' => $image->id,
                 'url' => $url,
                 'path_name' => $image->path_name,
+                'is_3d' => $image->is_3d,
                 'created_at' => $image->created_at
             ];
         });
@@ -38,12 +39,13 @@ class ImageController extends Controller
     public function store(Request $request, User $user)
     {
         $request->validate([
-            'images' => 'required',
-            'images.*' => 'image|max:5120', // 5MB
+            'images' => 'required|array',
+            'images.*.file' => 'required|image|max:5120', // 5MB
+            'images.*.is_3d' => 'required|in:true,false,1,0',
         ]);
 
         $images = $this->imageService->uploadImages(
-            $request->file('images'),
+            $request->all()['images'],
             $user
         );
 
