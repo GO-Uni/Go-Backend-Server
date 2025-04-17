@@ -100,100 +100,139 @@ class UserActivityController extends Controller
 
     public function chatbotResponse($userId)
     {
-        // Retrieve the userMessage from the request body
         $userMessage = request()->input('userMessage');
 
         if (!$userMessage) {
             return ApiResponseService::error("The 'userMessage' field is required.", null, 400);
         }
 
-        // Use OpenAI to extract the destination name, category, or district from the user message
-        $aiResponse = $this->openAIService->nameDetector(
-            "Extract the destination name, category, or district from this sentence: \"$userMessage\". If no destination, category, or district is found, respond with 'None'."
-        );
+        // 1. First try direct business name match from database
+        $allBusinessNames = BusinessProfile::pluck('business_name')->all();
+        $extractedName = $this->findBestBusinessNameMatch($userMessage, $allBusinessNames);
 
-        if (empty($aiResponse)) {
-            return ApiResponseService::error("Unable to process your request at the moment.", null, 500);
+        // 2. If no direct match found, use AI extraction
+        if (!$extractedName) {
+            $aiResponse = $this->openAIService->nameDetector(
+                "From this message: \"$userMessage\", extract any: 
+            1. Business/place names (even if it is unknown worldwide)
+            2. Categories/types (like hotel, restaurant, museum)
+            3. Districts/locations
+            Return the most relevant one or 'None' if none found."
+            );
+
+            if (empty($aiResponse)) {
+                return ApiResponseService::error("Unable to process your request.", null, 500);
+            }
+
+            $extractedName = trim($aiResponse);
         }
-
-        $extractedName = trim($aiResponse);
 
         if (strtolower($extractedName) === 'none') {
+            $recommendations = $this->fallbackToRecommendations($userId, $userMessage)->getData()->data;
+            $names = collect($recommendations)->pluck('business_name')->implode(', ');
             return ApiResponseService::success(
-                "No destinations, categories, or districts were found based on your input. Here are some recommendations based on your recent activities:",
-                $this->fallbackToRecommendations($userId, $userMessage)->getData()->data
+                "No specific places found. Try these recommendations: $names",
+                null
             );
         }
 
-        // Check if the extracted name matches a district
-        $districtBusinesses = BusinessProfile::where('district', 'LIKE', '%' . $extractedName . '%')->get();
-
+        // 1. First try district match
+        $districtBusinesses = BusinessProfile::where('district', 'LIKE', "%$extractedName%")->get();
         if ($districtBusinesses->isNotEmpty()) {
+            $names = $districtBusinesses->pluck('business_name')->implode(', ');
             return ApiResponseService::success(
-                "Here are some businesses in the district '{$extractedName}':",
-                $districtBusinesses
+                "Destinations in $extractedName: $names",
+                null
             );
         }
 
-        // Match the extracted name with a category using AI
+        // 2. Try category match with improved matching
         $matchedCategory = $this->matchCategory($extractedName);
-
         if ($matchedCategory) {
-            // Fetch destinations in the matched category
             $categoryDestinations = BusinessProfile::where('category_id', $matchedCategory->id)->get();
-
             if ($categoryDestinations->isNotEmpty()) {
+                $names = $categoryDestinations->pluck('business_name')->implode(', ');
                 return ApiResponseService::success(
-                    "Here are some destinations in the category '{$matchedCategory->name}':",
-                    $categoryDestinations
+                    "Places in {$matchedCategory->name} category: $names",
+                    null
                 );
             }
         }
 
-        // Check if the extracted name matches a specific destination
-        $specificDestination = BusinessProfile::where('business_name', 'LIKE', '%' . $extractedName . '%')->first();
-
+        // 3. Try direct business match (again with the extracted name)
+        $specificDestination = BusinessProfile::where('business_name', 'LIKE', "%$extractedName%")->first();
         if ($specificDestination) {
+            $description = $specificDestination->description ?? "No Description available";
             return ApiResponseService::success(
-                "Here is some information about {$specificDestination->business_name}:",
-                $specificDestination
+                "Information about {$specificDestination->business_name}: $description",
+                null
             );
         }
 
-        // Fallback to recommendations if no match is found
+        // Final fallback
+        $recommendations = $this->fallbackToRecommendations($userId, $userMessage)->getData()->data;
+        $names = collect($recommendations)->pluck('business_name')->implode(', ');
         return ApiResponseService::success(
-            "No exact matches were found. Based on your recent activities, here are some recommended places:",
-            $this->fallbackToRecommendations($userId, $userMessage)->getData()->data
+            "No exact matches. Try these: $names",
+            null
         );
     }
 
-    /**
-     * Match the extracted name with a category from the database using AI.
-     */
+    private function findBestBusinessNameMatch($userMessage, $businessNames)
+    {
+        $userMessage = strtolower($userMessage);
+        $businessNames = array_map('strtolower', $businessNames);
+
+        // First check for exact matches
+        foreach ($businessNames as $index => $name) {
+            if (strpos($userMessage, $name) !== false) {
+                // Return the original case version
+                return BusinessProfile::whereRaw('LOWER(business_name) = ?', [$name])->first()->business_name;
+            }
+        }
+
+        // Then check for partial matches
+        foreach ($businessNames as $index => $name) {
+            similar_text($userMessage, $name, $percent);
+            if ($percent > 80) { 
+                return BusinessProfile::whereRaw('LOWER(business_name) = ?', [$name])->first()->business_name;
+            }
+        }
+
+        return null;
+    }
+
     private function matchCategory($extractedName)
     {
-        // Fetch all categories from the database
-        $categories = Category::pluck('name')->toArray();
+        $categories = Category::all();
 
-        // Convert category names to a comma-separated string for AI
-        $categoriesList = implode(', ', $categories);
+        // Normalize the input 
+        $normalizedInput = strtolower(trim(preg_replace('/s$/', '', $extractedName)));
 
-        // capitalize first letter
-        $normalizedInput = ucfirst(strtolower(trim($extractedName)));
+        // First try direct match
+        foreach ($categories as $category) {
+            $normalizedCategory = strtolower(preg_replace('/s$/', '', $category->name));
+            if ($normalizedCategory === $normalizedInput) {
+                return $category;
+            }
+        }
 
-        // Use OpenAI to match the input with the closest category
+        // If no direct match, use AI for fuzzy matching
+        $categoriesList = $categories->pluck('name')->implode(', ');
+
         $aiResponse = $this->openAIService->nameDetector(
-            "From the following list of categories: [$categoriesList], determine which category best matches the input: \"$normalizedInput\". If no match is found, respond with 'None'."
+            "From these categories: [$categoriesList], which one best matches '$extractedName'? 
+        Consider singular/plural forms and similar meanings. Return only the best match or 'None'."
         );
 
-        $matchedCategoryName = ucfirst(strtolower(trim($aiResponse)));
-
-        if (strtolower($matchedCategoryName) === 'none') {
+        $matchedName = trim($aiResponse);
+        if (strtolower($matchedName) === 'none') {
             return null;
         }
 
-        // Find and return the matched category from the database
-        return Category::whereRaw('LOWER(name) = ?', [strtolower($matchedCategoryName)])->first();
+        return $categories->first(function ($cat) use ($matchedName) {
+            return strtolower($cat->name) === strtolower($matchedName);
+        });
     }
 
     private function fallbackToRecommendations($userId, $userMessage)
