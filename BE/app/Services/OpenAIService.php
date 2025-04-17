@@ -86,18 +86,32 @@ class OpenAIService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => "You are an assistant that extracts destination names from user queries. If no destination is found, respond with 'None'. List only the name"
+                        'content' => "You are a travel assistant that extracts and normalizes the following from user queries:
+                    1. Destination names (businesses, landmarks)
+                    2. Categories (normalized to singular form, e.g., 'hotels' → 'hotel')
+                    3. Districts/locations
+                    
+                    Rules:
+                    - Always return only the most relevant term
+                    - Normalize categories to singular form
+                    - For ambiguous terms, choose the most likely travel-related option
+                    - If nothing is found, respond exactly with 'None'
+                    - Never add explanations or notes"
                     ],
                     [
                         'role' => 'user',
                         'content' => $userQuery
                     ]
                 ],
-                'max_tokens' => 50,
+                'temperature' => 0.3,  
+                'max_tokens' => 30,
+                'top_p' => 0.9,
             ],
         ]);
 
         $data = json_decode($response->getBody(), true);
-        return $data['choices'][0]['message']['content'] ?? "None";
+        $result = trim($data['choices'][0]['message']['content'] ?? "None");
+
+        return $result === "" ? "None" : $result;
     }
 }
